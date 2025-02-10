@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:smarttalk/models/User.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AuthService {
-  final String baseUrl = 'http://127.0.0.1:5000';
+  final String baseUrl = dotenv.get('BASEURL');
 
   Future<bool> register(User user) async {
     final response = await http.post(
