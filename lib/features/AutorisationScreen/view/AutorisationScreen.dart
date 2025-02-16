@@ -27,11 +27,10 @@ class _AutorisationScreenState extends State<AutorisationScreen> {
 
     final success = await _authService.login(username, password);
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', success.toString());
-    await prefs.setString('username', username);
-
-    if (mounted) {
+    if (success) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', success.toString());
+      await prefs.setString('username', username);
       Navigator.pushNamed(context, '/friend_list');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('You have logged in.')),

@@ -17,9 +17,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _register() async {
     if (_formKey.currentState!.validate()) {
       final user = User(
-        userName: _usernameController.text,
+        username: _usernameController.text,
         password: _passwordController.text,
       );
+      debugPrint(_usernameController.text);
       final success = await _authService.register(user);
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -26,24 +26,33 @@ class AuthService {
   }
 
   Future<bool> login(String username, String password) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'username': username, 'password': password}),
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password}),
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final token = data['token']; // Проверить, не null ли это поле
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
 
-      if (token == null) {
-        throw Exception("Ошибка: сервер не вернул токен");
+        if (!data.containsKey('token') || data['token'] == null) {
+          print("Ошибка: сервер не вернул токен");
+          return false;
+        }
+
+        final token = data['token'];
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', token);
+
+        return true;
+      } else {
+        print("Ошибка входа: ${response.statusCode} - ${response.body}");
+        return false;
       }
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', token);
-      return true;
-    } else {
+    } catch (error) {
+      print("Ошибка сети: $error");
       return false;
     }
   }
