@@ -22,73 +22,30 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
 
   @override
   void initState() {
-    super.initState();
-    _loadCurrentUser();
+    super.initState(); // Всегда вызывайте super.initState() первым
+    _initializeData();
+  }
+
+  void _initializeData() async {
+    await _loadCurrentUser();
+    await _loadSecondUserId();
+    await _initializeConversation();
     _loadMessages();
-  }
-
-  void _initializeConversation() async {
-    try {
-      secondUserID =
-          _getUserIdByUsername(widget.usersName.toString(), secondUserID)
-              as int;
-      final convId = await getOrCreateConversation(
-          currentUserId.toString(), secondUserID.toString());
-      if (convId != null) {
-        setState(() {
-          conversationId = convId;
-        });
-        _loadMessages();
-      }
-    } catch (e) {
-      debugPrint('Ошибка: $e');
-    }
-  }
-
-  Future<int?> getOrCreateConversation(String user1Id, String user2Id) async {
-    final baseUrl = dotenv.get('BASEURL');
-
-    // Пытаемся найти беседу
-    final response = await http.get(
-      Uri.parse('$baseUrl/conversations?user1_id=$user1Id&user2_id=$user2Id'),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['id']; // Возвращаем ID существующей беседы
-    } else if (response.statusCode == 404) {
-      // Если беседа не найдена, создаем новую
-      final createResponse = await http.post(
-        Uri.parse('$baseUrl/conversations'),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          'user1_id': user1Id,
-          'user2_id': user2Id,
-        }),
-      );
-
-      if (createResponse.statusCode == 201) {
-        final data = jsonDecode(createResponse.body);
-        return data['id']; // Возвращаем ID новой беседы
-      }
-    }
-
-    return null; // Если произошла ошибка
   }
 
   Future<void> _loadCurrentUser() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      currentUsername = prefs.getString('username') ?? '';
-    });
-
+    currentUsername = prefs.getString('username') ?? '';
     if (currentUsername.isNotEmpty) {
-      currentUserId =
-          (await _getUserIdByUsername(currentUsername, currentUserId))!;
+      currentUserId = await _getUserIdByUsername(currentUsername);
     }
   }
 
-  Future<int?> _getUserIdByUsername(String name, int UsersID) async {
+  Future<void> _loadSecondUserId() async {
+    secondUserID = await _getUserIdByUsername(widget.usersName);
+  }
+
+  Future<int> _getUserIdByUsername(String name) async {
     final baseUrl = dotenv.get('BASEURL');
     final response = await http.get(
       Uri.parse('$baseUrl/users/id?username=$name'),
@@ -96,21 +53,48 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      setState(() {
-        UsersID = data['id'];
-      });
-
-      _initializeConversation();
-      return UsersID;
+      return data['id'];
     } else {
-      debugPrint("Ошибка загрузки ID пользователя");
+      throw Exception('Ошибка загрузки ID пользователя');
     }
-    return null;
+  }
+
+  Future<void> _initializeConversation() async {
+    final convId = await getOrCreateConversation(
+      currentUserId.toString(),
+      secondUserID.toString(),
+    );
+    setState(() {
+      conversationId = convId;
+    });
+  }
+
+  Future<int> getOrCreateConversation(String user1Id, String user2Id) async {
+    final baseUrl = dotenv.get('BASEURL');
+    final response = await http.get(
+      Uri.parse(
+          '$baseUrl/conversations/id?user1_id=$user1Id&user2_id=$user2Id'),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body)['conversation_id'];
+    } else if (response.statusCode == 404) {
+      final createResponse = await http.post(
+        Uri.parse('$baseUrl/conversations'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({'user1_id': user1Id, 'user2_id': user2Id}),
+      );
+      if (createResponse.statusCode == 201) {
+        return jsonDecode(createResponse.body)['id'];
+      }
+    }
+    throw Exception('Ошибка создания/получения беседы');
   }
 
   Future<void> _loadMessages() async {
-    final response = await http.get(Uri.parse(
-        '${dotenv.get('BASEURL')}/messages?conversation_id=$conversationId'));
+    final response = await http
+        .get(Uri.parse('${dotenv.get('BASEURL')}/messages/$conversationId'));
+    debugPrint(response.statusCode.toString());
     if (response.statusCode == 200) {
       setState(() {
         messages = List<Map<String, dynamic>>.from(jsonDecode(response.body));
@@ -123,24 +107,28 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
     final messageText = _messageController.text.trim();
     _messageController.clear();
 
-    if (conversationId == null) {
-      getOrCreateConversation(
-          currentUsername.toString(), secondUserID.toString());
-    }
+    // Добавляем сообщение в локальный список
+
     final response = await http.post(
       Uri.parse('${dotenv.get('BASEURL')}/messages'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'conversation_id': conversationId,
         'sender_id': currentUserId,
+        'receiver_id': secondUserID,
         'content': messageText,
       }),
     );
 
     if (response.statusCode == 201) {
+      // Обновляем сообщения после успешной отправки
+      _loadMessages();
+    } else {
+      // Если отправка не удалась, удаляем сообщение из локального списка
       setState(() {
-        messages.add({'text': messageText, 'isSentByMe': true});
+        messages.removeLast();
       });
+      debugPrint('Ошибка отправки сообщения');
     }
   }
 
@@ -160,7 +148,7 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
               itemBuilder: (context, index) {
                 final message = messages[index];
                 return Align(
-                  alignment: message['isSentByMe']
+                  alignment: message['sender_id'] == currentUserId
                       ? Alignment.centerRight
                       : Alignment.centerLeft,
                   child: Container(
@@ -168,12 +156,12 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: message['isSentByMe']
+                      color: message['sender_id'] == currentUserId
                           ? Colors.blue[100]
                           : Colors.grey[300],
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(message['text']),
+                    child: Text(message['content']),
                   ),
                 );
               },

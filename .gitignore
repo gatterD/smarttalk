@@ -3,7 +3,6 @@
 *.log
 *.pyc
 *.swp
-.env
 .DS_Store
 .atom/
 .build/
@@ -44,3 +43,5 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+.vscode/launch.json
+.env
