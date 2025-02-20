@@ -1,88 +1,94 @@
 import 'package:flutter/material.dart';
-import 'package:smarttalk/models/AutorisationHelper.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:smarttalk/theme/theme.dart';
 
-class AutorisationScreen extends StatefulWidget {
-  const AutorisationScreen({super.key});
+import '../bloc/AutorisationBloc.dart';
 
-  @override
-  State<AutorisationScreen> createState() => _AutorisationScreenState();
-}
-
-class _AutorisationScreenState extends State<AutorisationScreen> {
+class AutorisationScreen extends StatelessWidget {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
-
-  void _login() async {
-    final username = _usernameController.text.trim();
-    final password = _passwordController.text.trim();
-
-    if (username.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Username and password cannot be empty!')),
-      );
-      return;
-    }
-
-    final success = await _authService.login(username, password);
-
-    if (success) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', success.toString());
-      await prefs.setString('username', username);
-      Navigator.pushNamed(context, '/friend_list');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('You have logged in.')),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 50),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextField(
-                controller: _usernameController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Enter username',
-                  labelText: 'Username',
-                ),
-              ),
-              SizedBox(height: 20),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Enter password',
-                  labelText: 'Password',
-                ),
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _login,
-                child: const Text('Enter'),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('You have no account?'),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/register');
-                    },
-                    child: Text('Register'),
+    return BlocProvider(
+      create: (context) => AutorisationBloc(),
+      child: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 50),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextField(
+                  controller: _usernameController,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter username',
                   ),
-                ],
-              ),
-            ],
+                ),
+                SizedBox(height: 20),
+                TextField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter password',
+                  ),
+                ),
+                SizedBox(height: 20),
+                BlocConsumer<AutorisationBloc, AutorisationState>(
+                  listener: (context, state) {
+                    if (state is AutorisationSuccess) {
+                      Navigator.pushNamed(context, '/friend_list');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('You have logged in.')),
+                      );
+                    } else if (state is AutorisationFailure) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(state.error)),
+                      );
+                    }
+                  },
+                  builder: (context, state) {
+                    if (state is AutorisationLoading) {
+                      return CircularProgressIndicator();
+                    }
+                    return ElevatedButton(
+                      onPressed: () {
+                        final username = _usernameController.text.trim();
+                        final password = _passwordController.text.trim();
+
+                        if (username.isEmpty || password.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    'Username and password cannot be empty!')),
+                          );
+                          return;
+                        }
+                        context
+                            .read<AutorisationBloc>()
+                            .add(LoginEvent(username, password));
+                      },
+                      child: const Text('Enter'),
+                    );
+                  },
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'You have no account?',
+                      style: theme.textTheme.labelMedium,
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/register');
+                      },
+                      child: Text('Register'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

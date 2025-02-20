@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smarttalk/features/UsersMessageScreen/view/UsersMessageScreen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:smarttalk/theme/theme.dart';
 import '../../AutorisationScreen/Autorisation.dart';
 
 class FriendsListScreen extends StatefulWidget {
@@ -61,12 +62,17 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: Text('Список пользователей'),
+        title: Text('SmartTalk'),
+        leading: IconButton(
+          icon: Icon(Icons.exit_to_app),
+          onPressed: _logout,
+        ),
         actions: [
           IconButton(
-            icon: Icon(Icons.exit_to_app),
-            onPressed: _logout,
-          )
+              onPressed: () {
+                Navigator.pushNamed(context, '/search');
+              },
+              icon: Icon(Icons.search))
         ],
       ),
       body: users.isEmpty
@@ -74,8 +80,8 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
               child: users.isEmpty
                   ? Text(
                       'You have no contact`s :(',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: theme.textTheme.labelMedium
+                          ?.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
                     )
                   : CircularProgressIndicator(),
             )
@@ -83,8 +89,14 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
               itemCount: users.length,
               itemBuilder: (context, index) {
                 return ListTile(
-                  title: Text(users[index]['username']),
-                  subtitle: Text('ID: ${users[index]['id']}'),
+                  leading:
+                      CircleAvatar(child: Text(users[index]['username'][0])),
+                  title: Text(users[index]['username'],
+                      style: theme.textTheme.labelMedium),
+                  subtitle: Text(
+                    'ID: ${users[index]['id']}',
+                    style: theme.textTheme.labelSmall,
+                  ),
                   onTap: () {
                     Navigator.push(
                       context,
