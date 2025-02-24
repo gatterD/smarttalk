@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smarttalk/features/UsersMessageScreen/view/UsersMessageScreen.dart';
-
-import '../../AutorisationScreen/view/AutorisationScreen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../../AutorisationScreen/Autorisation.dart';
 
 class FriendsListScreen extends StatefulWidget {
   @override
@@ -19,25 +19,26 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   void initState() {
     super.initState();
     _loadCurrentUser();
+    fetchUsers();
   }
 
   Future<void> _loadCurrentUser() async {
     final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('username');
     setState(() {
-      currentUsername =
-          prefs.getString('username'); // Получаем имя пользователя
+      currentUsername = username;
     });
-    fetchUsers();
   }
 
   Future<void> fetchUsers() async {
-    final response = await http.get(Uri.parse('http://127.0.0.1:5000/users'));
+    final response =
+        await http.get(Uri.parse('${dotenv.get('BASEURL')}/users'));
     if (response.statusCode == 200) {
       List<dynamic> allUsers = jsonDecode(response.body);
 
       setState(() {
         users = allUsers
-            .where((user) => user['userName'] != currentUsername)
+            .where((user) => user['username'] != currentUsername)
             .toList();
       });
     } else {
@@ -70,9 +71,9 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       ),
       body: users.isEmpty
           ? Center(
-              child: users.isEmpty && currentUsername != null
+              child: users.isEmpty
                   ? Text(
-                      'У вас пока нет контактов :(',
+                      'You have no contact`s :(',
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     )
@@ -82,14 +83,14 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
               itemCount: users.length,
               itemBuilder: (context, index) {
                 return ListTile(
-                  title: Text(users[index]['userName']),
+                  title: Text(users[index]['username']),
                   subtitle: Text('ID: ${users[index]['id']}'),
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => UsersMessageScreen(
-                          usersName: users[index]['userName'],
+                          usersName: users[index]['username'],
                         ),
                       ),
                     );
