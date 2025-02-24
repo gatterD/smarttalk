@@ -13,37 +13,118 @@ class FriendsListScreen extends StatefulWidget {
 }
 
 class _FriendsListScreenState extends State<FriendsListScreen> {
-  List<dynamic> users = [];
-  String? currentUsername;
+  List<dynamic> friends = [];
+  String? currentUserID;
+  List<dynamic> pinnedFriends = [];
+  List<dynamic> pinnedFriendsList = [];
+  List<dynamic> sortedFriends = [];
 
   @override
   void initState() {
     super.initState();
     _loadCurrentUser();
-    fetchUsers();
   }
 
   Future<void> _loadCurrentUser() async {
     final prefs = await SharedPreferences.getInstance();
-    final username = prefs.getString('username');
-    setState(() {
-      currentUsername = username;
-    });
+    final userID = prefs.getString('id'); // Получаем ID текущего пользователя
+    if (userID != null) {
+      setState(() {
+        currentUserID = userID;
+      });
+      await fetchFriends();
+      await fetchPinnedFriends();
+      List<dynamic> filteredFriends = friends
+          .where((friend) => !pinnedFriendsList.contains(friend))
+          .toList();
+      sortedFriends = [...pinnedFriendsList, ...filteredFriends];
+      debugPrint(sortedFriends.toString());
+    }
   }
 
-  Future<void> fetchUsers() async {
-    final response =
-        await http.get(Uri.parse('${dotenv.get('BASEURL')}/users'));
-    if (response.statusCode == 200) {
-      List<dynamic> allUsers = jsonDecode(response.body);
+  Future<void> fetchPinnedFriends() async {
+    if (currentUserID == null) return;
 
-      setState(() {
-        users = allUsers
-            .where((user) => user['username'] != currentUsername)
+    try {
+      final response = await http.get(
+        Uri.parse(
+            '${dotenv.get('BASEURL')}/pinned/$currentUserID/conversations'),
+      );
+
+      debugPrint(response.body);
+      if (response.statusCode == 200) {
+        setState(() {
+          pinnedFriends = jsonDecode(response.body);
+          pinnedFriendsList = pinnedFriends.map((id) {
+            return friends.firstWhere((friend) => friend["id"] == id,
+                orElse: () => null);
+          }).toList();
+        });
+      } else {
+        throw Exception(
+            'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
+      }
+    } catch (e) {
+      debugPrint('❌ Ошибка сети: $e');
+    }
+  }
+
+  Future<void> fetchFriends() async {
+    if (currentUserID == null) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('${dotenv.get('BASEURL')}/users/$currentUserID/friends'),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          friends = jsonDecode(response.body);
+        });
+      } else {
+        throw Exception(
+            'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
+      }
+    } catch (e) {
+      debugPrint('❌ Ошибка сети: $e');
+    }
+  }
+
+  Future<void> _pinConv(String friendId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${dotenv.get('BASEURL')}/pinned'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'id': currentUserID, 'friendId': friendId}),
+      );
+
+      debugPrint('📡 Ответ сервера: ${response.statusCode}');
+      debugPrint('📡 Тело ответа: ${response.body}');
+
+      if (response.statusCode == 200) {
+        // Обновляем состояние и перезагружаем данные
+        setState(() {
+          // Добавляем friendId в список pinnedFriends
+          pinnedFriends.add(friendId);
+        });
+
+        // Перезагружаем данные
+        await fetchFriends();
+        await fetchPinnedFriends();
+
+        // Обновляем sortedFriends
+        List<dynamic> filteredFriends = friends
+            .where((friend) => !pinnedFriends.contains(friend['id']))
             .toList();
-      });
-    } else {
-      throw Exception('Ошибка загрузки пользователей');
+        setState(() {
+          sortedFriends = [...pinnedFriendsList, ...filteredFriends];
+        });
+      } else {
+        throw Exception(
+            'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
+      }
+    } catch (e) {
+      debugPrint('❌ Ошибка сети: $e');
     }
   }
 
@@ -51,6 +132,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('username');
+    await prefs.remove('id');
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => AutorisationScreen()),
@@ -75,42 +157,58 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
               icon: Icon(Icons.search))
         ],
       ),
-      body: users.isEmpty
-          ? Center(
-              child: users.isEmpty
-                  ? Text(
-                      'You have no contact`s :(',
-                      style: theme.textTheme.labelMedium
-                          ?.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
-                    )
-                  : CircularProgressIndicator(),
-            )
-          : ListView.separated(
-              itemCount: users.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  leading:
-                      CircleAvatar(child: Text(users[index]['username'][0])),
-                  title: Text(users[index]['username'],
-                      style: theme.textTheme.labelMedium),
-                  subtitle: Text(
-                    'ID: ${users[index]['id']}',
-                    style: theme.textTheme.labelSmall,
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => UsersMessageScreen(
-                          usersName: users[index]['username'],
+      body: RefreshIndicator(
+        onRefresh: fetchFriends, // Метод для обновления данных
+        child: sortedFriends.isEmpty
+            ? Center(
+                child: sortedFriends.isEmpty
+                    ? Text(
+                        'You have no contacts :(',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      )
+                    : CircularProgressIndicator(),
+              )
+            : ListView.separated(
+                itemCount: sortedFriends.length,
+                itemBuilder: (context, index) {
+                  final isPinned =
+                      pinnedFriends.contains(sortedFriends[index]['id']);
+                  return ListTile(
+                    leading: CircleAvatar(
+                        child: Text(sortedFriends[index]['username'][0])),
+                    title: Text(sortedFriends[index]['username'],
+                        style: theme.textTheme.labelMedium),
+                    subtitle: Text(
+                      'ID: ${sortedFriends[index]['id']}',
+                      style: theme.textTheme.labelSmall,
+                    ),
+                    trailing: isPinned
+                        ? Icon(Icons.push_pin_rounded)
+                        : IconButton(
+                            onPressed: () {
+                              _pinConv(sortedFriends[index]['id'].toString());
+                            },
+                            icon: Icon(
+                              Icons.push_pin_outlined,
+                              color: Colors.white,
+                            )),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UsersMessageScreen(
+                            usersName: sortedFriends[index]['username'],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
-              separatorBuilder: (BuildContext context, int index) => Divider(),
-            ),
+                      );
+                    },
+                  );
+                },
+                separatorBuilder: (BuildContext context, int index) =>
+                    Divider(),
+              ),
+      ),
     );
   }
 }
