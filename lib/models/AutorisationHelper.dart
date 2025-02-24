@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:smarttalk/models/User.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -37,23 +38,24 @@ class AuthService {
         final data = jsonDecode(response.body);
 
         if (!data.containsKey('token') || data['token'] == null) {
-          print("Ошибка: сервер не вернул токен");
+          debugPrint("Ошибка: сервер не вернул токен");
           return false;
         }
-
         final token = data['token'];
+        final currID = data['currId'];
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', token);
         await prefs.setString('username', username);
+        await prefs.setString('id', currID.toString());
 
         return true;
       } else {
-        print("Ошибка входа: ${response.statusCode} - ${response.body}");
+        debugPrint("Ошибка входа: ${response.statusCode} - ${response.body}");
         return false;
       }
     } catch (error) {
-      print("Ошибка сети: $error");
+      debugPrint("Ошибка сети: $error");
       return false;
     }
   }

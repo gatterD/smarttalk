@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smarttalk/functions/PasswordValidate.dart';
+import 'package:smarttalk/functions/UserNameValidation.dart';
 import 'package:smarttalk/models/AutorisationHelper.dart';
 import 'package:smarttalk/models/User.dart';
 
@@ -12,6 +13,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _passwordSecondController = TextEditingController();
   final AuthService _authService = AuthService();
 
   void _register() async {
@@ -48,41 +50,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
               TextFormField(
                 controller: _usernameController,
                 decoration: InputDecoration(
-                  labelText: 'Username',
                   hintText: 'Enter username',
-                  border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a username';
-                  }
-                  return null;
-                },
+                validator: validateUsername,
+              ),
+              Padding(
+                padding: EdgeInsets.only(top: 20),
+                child: TextFormField(
+                  controller: _passwordController,
+                  decoration: InputDecoration(
+                    hintText: 'Enter password',
+                  ),
+                  obscureText: true,
+                  validator: validatePassword,
+                ),
               ),
               Padding(
                 padding: EdgeInsets.symmetric(vertical: 20),
                 child: TextFormField(
-                  controller: _passwordController,
+                  controller: _passwordSecondController,
                   decoration: InputDecoration(
-                    labelText: 'Password',
-                    hintText: 'Enter password',
-                    border: OutlineInputBorder(),
+                    hintText: 'Enter password again',
                   ),
+                  validator: validatePassword,
                   obscureText: true,
                 ),
               ),
               ElevatedButton(
                 onPressed: () {
-                  String? validating =
-                      validatePassword(_passwordController.text);
-                  if (validating != null) {
+                  if (comparePasswords(_passwordController.text,
+                      _passwordSecondController.text)) {
+                    _register();
+                  } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(validating)),
+                      SnackBar(content: Text('Passwords must be the same!')),
                     );
-                    return;
                   }
-
-                  _register();
                 },
                 child: Text('Register'),
               ),
