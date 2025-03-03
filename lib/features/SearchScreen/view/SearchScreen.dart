@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smarttalk/features/UsersMessageScreen/UsersMessage.dart';
 
 import '../../../theme/theme.dart';
 
@@ -175,6 +176,14 @@ class _SearchScreenState extends State<SearchScreen> {
                             ),
                       onTap: () {
                         debugPrint("Выбран пользователь: ${user['username']}");
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => UsersMessageScreen(
+                              usersName: user['username'],
+                            ),
+                          ),
+                        );
                       },
                     );
                   },

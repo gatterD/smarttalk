@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:smarttalk/features/UsersMessageScreen/view/UsersMessageScreen.dart';
+import 'package:smarttalk/features/UsersMessageScreen/UsersMessage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:smarttalk/theme/theme.dart';
 import '../../AutorisationScreen/Autorisation.dart';
@@ -15,9 +15,12 @@ class FriendsListScreen extends StatefulWidget {
 class _FriendsListScreenState extends State<FriendsListScreen> {
   List<dynamic> friends = [];
   String? currentUserID;
+  String? currentUsername;
   List<dynamic> pinnedFriends = [];
   List<dynamic> pinnedFriendsList = [];
   List<dynamic> sortedFriends = [];
+  List<dynamic> otherConversations = [];
+  List<dynamic> otherConversationsIDs = [];
 
   @override
   void initState() {
@@ -28,17 +31,54 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   Future<void> _loadCurrentUser() async {
     final prefs = await SharedPreferences.getInstance();
     final userID = prefs.getString('id'); // Получаем ID текущего пользователя
+    final username = prefs.getString('username');
     if (userID != null) {
       setState(() {
         currentUserID = userID;
+        currentUsername = username;
       });
       await fetchFriends();
       await fetchPinnedFriends();
+      await fetchOtherConv();
       List<dynamic> filteredFriends = friends
           .where((friend) => !pinnedFriendsList.contains(friend))
           .toList();
       sortedFriends = [...pinnedFriendsList, ...filteredFriends];
-      debugPrint(sortedFriends.toString());
+      await getOtherConversationsByID();
+      sortedFriends = [
+        ...pinnedFriendsList,
+        ...filteredFriends,
+        ...otherConversations
+      ];
+    }
+  }
+
+  Future<void> getOtherConversationsByID() async {
+    for (var friend in sortedFriends) {
+      if (otherConversationsIDs.contains(friend['id'].toString())) {
+        otherConversationsIDs.remove(friend['id'].toString());
+      }
+    }
+    if (otherConversationsIDs.isNotEmpty) {
+      otherConversations.clear();
+      for (var ID in otherConversationsIDs) {
+        try {
+          final response = await http.get(
+            Uri.parse('${dotenv.get('BASEURL')}/user/$ID'),
+          );
+
+          if (response.statusCode == 200) {
+            setState(() {
+              otherConversations.add(jsonDecode(response.body));
+            });
+          } else {
+            throw Exception(
+                'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
+          }
+        } catch (e) {
+          debugPrint('❌ Ошибка сети: $e');
+        }
+      }
     }
   }
 
@@ -50,8 +90,6 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
         Uri.parse(
             '${dotenv.get('BASEURL')}/pinned/$currentUserID/conversations'),
       );
-
-      debugPrint(response.body);
       if (response.statusCode == 200) {
         setState(() {
           pinnedFriends = jsonDecode(response.body);
@@ -60,6 +98,39 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                 orElse: () => null);
           }).toList();
         });
+      } else {
+        throw Exception(
+            'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
+      }
+    } catch (e) {
+      debugPrint('❌ Ошибка сети: $e');
+    }
+  }
+
+  Future<void> fetchOtherConv() async {
+    if (currentUserID == null) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('${dotenv.get('BASEURL')}/conversation/$currentUserID'),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          otherConversations = jsonDecode(response.body);
+        });
+
+        for (var conv in otherConversations) {
+          if (conv['user1_id'].toString() == currentUserID) {
+            setState(() {
+              otherConversationsIDs.add(conv['user2_id'].toString());
+            });
+          } else if (conv['user2_id'].toString() == currentUserID) {
+            setState(() {
+              otherConversationsIDs.add(conv['user1_id'].toString());
+            });
+          }
+        }
       } else {
         throw Exception(
             'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
@@ -112,10 +183,10 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
         await fetchFriends();
         await fetchPinnedFriends();
 
-        // Обновляем sortedFriends
         List<dynamic> filteredFriends = friends
             .where((friend) => !pinnedFriends.contains(friend['id']))
             .toList();
+
         setState(() {
           sortedFriends = [...pinnedFriendsList, ...filteredFriends];
         });
@@ -142,12 +213,60 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(
+        child: Column(
+          children: [
+            UserAccountsDrawerHeader(
+              accountName: Text(
+                currentUsername ?? 'Загрузка...',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontSize: 20,
+                  color: Colors.white,
+                ),
+              ),
+              accountEmail: null,
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Text(
+                  currentUsername != null && currentUsername!.isNotEmpty
+                      ? currentUsername![0].toUpperCase()
+                      : '?',
+                  style: TextStyle(fontSize: 24),
+                ),
+              ),
+              decoration: BoxDecoration(
+                color: theme.appBarTheme.backgroundColor,
+              ),
+            ),
+            // Здесь можно добавить дополнительные пункты меню
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: Text('Настройки'),
+              onTap: () {
+                // Навигация к экрану настроек
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton.icon(
+                icon: Icon(Icons.exit_to_app),
+                label: Text('Выйти'),
+                onPressed: _logout,
+              ),
+            ),
+          ],
+        ),
+      ),
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Text('SmartTalk'),
-        leading: IconButton(
-          icon: Icon(Icons.exit_to_app),
-          onPressed: _logout,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(Icons.menu),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+          ),
         ),
         actions: [
           IconButton(
