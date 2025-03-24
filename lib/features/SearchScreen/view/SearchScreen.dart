@@ -17,7 +17,8 @@ class _SearchScreenState extends State<SearchScreen> {
   List<Map<String, dynamic>> _users = [];
   Set<int> _friends = {}; // Список ID друзей
   bool _isLoading = false;
-  String? _currentUserId; // ID текущего пользователя
+  String? _currentUserId;
+  List<dynamic> _black_list = [];
   final String baseUrl = dotenv.get('BASEURL');
 
   @override
@@ -35,15 +36,16 @@ class _SearchScreenState extends State<SearchScreen> {
       setState(() {
         _currentUserId = userId;
       });
-      _fetchFriends(userId); // Загружаем список друзей
+      await _fetchBLUsers(userId);
+      await _fetchFriends(userId);
     }
   }
 
   /// Загружаем список друзей текущего пользователя
-  Future<void> _fetchFriends(String userId) async {
+  Future<void> _fetchFriends(String userID) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/users/$userId/friends'),
+        Uri.parse('$baseUrl/users/$userID/friends'),
       );
 
       if (response.statusCode == 200) {
@@ -97,12 +99,15 @@ class _SearchScreenState extends State<SearchScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/users/search?query=$query'),
+        Uri.parse('$baseUrl/user/search?query=$query'),
       );
 
       if (response.statusCode == 200) {
         setState(() {
           _users = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+          for (var blUser in _black_list) {
+            _users.removeWhere((user) => user['id'] == blUser);
+          }
         });
       } else {
         throw Exception('Ошибка при поиске пользователей');
@@ -114,6 +119,21 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() {
       _isLoading = false;
     });
+  }
+
+  Future<void> _fetchBLUsers(String userID) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/black_list/$userID'),
+      );
+
+      debugPrint(response.body.toString());
+      if (response.statusCode == 200) {
+        _black_list = jsonDecode(response.body);
+      }
+    } catch (e) {
+      debugPrint("Ошибка загрузки черного списка: $e");
+    }
   }
 
   @override

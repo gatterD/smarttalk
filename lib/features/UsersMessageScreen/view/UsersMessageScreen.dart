@@ -19,6 +19,8 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
   late int conversationId;
   late int secondUserID;
   late String currentUsername;
+  List<dynamic> black_list = [];
+  bool chekBLUser = false;
 
   @override
   void initState() {
@@ -30,7 +32,69 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
     await _loadCurrentUser();
     await _loadSecondUserId();
     await _initializeConversation();
+    await _getBlackList();
+    await _chekBlackList();
+
+    debugPrint(chekBLUser.toString());
+    debugPrint(black_list.toString());
     _loadMessages();
+  }
+
+  Future<void> _chekBlackList() async {
+    for (var blacklistItem in black_list) {
+      if (blacklistItem == currentUserId) {
+        chekBLUser = true;
+        break;
+      }
+    }
+  }
+
+  Future<void> _getBlackList() async {
+    final baseUrl = dotenv.get('BASEURL');
+    final response = await http.get(
+      Uri.parse('$baseUrl/black_list/$secondUserID'),
+    );
+
+    if (response.statusCode == 200) {
+      // Проверяем, что тело ответа не пустое
+      if (response.body.isNotEmpty) {
+        try {
+          // Декодируем JSON
+          final decodedData = jsonDecode(response.body);
+
+          // Убедимся, что decodedData является списком
+          if (decodedData is List) {
+            setState(() {
+              black_list = decodedData;
+            });
+          } else {
+            // Если decodedData не список, инициализируем black_list пустым списком
+            setState(() {
+              black_list = [];
+            });
+          }
+        } catch (e) {
+          // В случае ошибки декодирования, инициализируем black_list пустым списком
+          debugPrint('Error decoding JSON: $e');
+          setState(() {
+            black_list = [];
+          });
+        }
+      } else {
+        // Если тело ответа пустое, инициализируем black_list пустым списком
+        setState(() {
+          black_list = [];
+        });
+      }
+    } else {
+      // Если статус код не 200, выводим ошибку
+      debugPrint('Failed to load black list: ${response.statusCode}');
+      setState(() {
+        black_list = [];
+      });
+    }
+
+    debugPrint(black_list.toString());
   }
 
   Future<void> _loadCurrentUser() async {
@@ -48,9 +112,8 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
   Future<int> _getUserIdByUsername(String name) async {
     final baseUrl = dotenv.get('BASEURL');
     final response = await http.get(
-      Uri.parse('$baseUrl/users/id?username=$name'),
+      Uri.parse('$baseUrl/user/name/$name'),
     );
-
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return data['id'];
@@ -94,7 +157,6 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
   Future<void> _loadMessages() async {
     final response = await http
         .get(Uri.parse('${dotenv.get('BASEURL')}/messages/$conversationId'));
-    debugPrint(response.statusCode.toString());
     if (response.statusCode == 200) {
       setState(() {
         messages = List<Map<String, dynamic>>.from(jsonDecode(response.body));
@@ -135,10 +197,7 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: Text(widget.usersName),
-      ),
+      appBar: AppBar(centerTitle: true, title: Text(widget.usersName)),
       body: Column(
         children: [
           Expanded(
@@ -179,33 +238,55 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
                 ),
               ],
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: 'Напишите сообщение...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+            child: chekBLUser
+                ? Container(
+                    width: double.infinity, // Растягиваем на всю ширину экрана
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 16), // Отступы
+                    decoration: BoxDecoration(
+                      color: Colors.red, // Красный фон
+                      borderRadius:
+                          BorderRadius.circular(8), // Закругленные углы
                     ),
+                    child: const Center(
+                      // Центрируем текст
+                      child: Text(
+                        'Данный пользователь добавил вас в Черный список',
+                        style: TextStyle(
+                          color: Colors.white, // Белый текст
+                          fontSize: 16, // Размер текста
+                        ),
+                      ),
+                    ),
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _messageController,
+                          decoration: InputDecoration(
+                            hintText: 'Напишите сообщение...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      CircleAvatar(
+                        backgroundColor: Colors.blue,
+                        child: IconButton(
+                          icon: const Icon(Icons.send_rounded,
+                              color: Colors.white),
+                          onPressed: _sendMessage,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                CircleAvatar(
-                  backgroundColor: Colors.blue,
-                  child: IconButton(
-                    icon: const Icon(Icons.send_rounded, color: Colors.white),
-                    onPressed: _sendMessage,
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
