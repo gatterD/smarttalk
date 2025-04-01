@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smarttalk/theme/theme.dart';
 
 class ChatCreation extends StatefulWidget {
   const ChatCreation({super.key});
@@ -36,17 +37,15 @@ class _ChatCreationState extends State<ChatCreation> {
             TextField(
               controller: _chatNameController,
               decoration: const InputDecoration(
-                labelText: 'Название чата',
+                hintText: 'Название чата',
                 border: OutlineInputBorder(),
               ),
             ),
 
             const SizedBox(height: 20),
-
-            // Зона добавленных пользователей
-            const Text(
+            Text(
               'Добавленные участники:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: theme.textTheme.labelLarge,
             ),
             const SizedBox(height: 8),
             Container(
@@ -57,12 +56,19 @@ class _ChatCreationState extends State<ChatCreation> {
               ),
               height: 100,
               child: _addedUsers.isEmpty
-                  ? const Center(child: Text('Пока никого нет'))
+                  ? Center(
+                      child: Text(
+                      'Пока никого нет',
+                      style: theme.textTheme.labelSmall,
+                    ))
                   : ListView.builder(
                       itemCount: _addedUsers.length,
                       itemBuilder: (context, index) {
                         return ListTile(
-                          title: Text(_addedUsers[index]),
+                          title: Text(
+                            _addedUsers[index],
+                            style: theme.textTheme.labelMedium,
+                          ),
                           trailing: IconButton(
                             icon: const Icon(Icons.remove_circle,
                                 color: Colors.red),
@@ -81,9 +87,9 @@ class _ChatCreationState extends State<ChatCreation> {
             const SizedBox(height: 20),
 
             // Зона доступных пользователей
-            const Text(
+            Text(
               'Доступные пользователи:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: theme.textTheme.labelLarge,
             ),
             const SizedBox(height: 8),
             Expanded(
@@ -97,7 +103,10 @@ class _ChatCreationState extends State<ChatCreation> {
                   itemCount: _availableUsers.length,
                   itemBuilder: (context, index) {
                     return ListTile(
-                      title: Text(_availableUsers[index]),
+                      title: Text(
+                        _availableUsers[index],
+                        style: theme.textTheme.labelMedium,
+                      ),
                       trailing: IconButton(
                         icon: const Icon(Icons.add_circle, color: Colors.green),
                         onPressed: () {
