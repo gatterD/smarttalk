@@ -309,6 +309,13 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
               },
             ),
             ListTile(
+              leading: Icon(Icons.settings),
+              title: Text('Создание беседы'),
+              onTap: () {
+                Navigator.pushNamed(context, '/chat-creation');
+              },
+            ),
+            ListTile(
               leading: Icon(Icons.no_accounts_sharp),
               title: Text('Черный список'),
               onTap: () {
