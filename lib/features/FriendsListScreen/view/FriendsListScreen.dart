@@ -309,7 +309,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.settings),
+              leading: Icon(Icons.forum_outlined),
               title: Text('Создание беседы'),
               onTap: () {
                 Navigator.pushNamed(context, '/chat-creation');

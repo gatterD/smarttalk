@@ -1,5 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:smarttalk/theme/theme.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatCreation extends StatefulWidget {
   const ChatCreation({super.key});
@@ -9,17 +13,50 @@ class ChatCreation extends StatefulWidget {
 }
 
 class _ChatCreationState extends State<ChatCreation> {
-  final TextEditingController _chatNameController = TextEditingController();
-  final List<String> _addedUsers = []; // Список добавленных пользователей
-  final List<String> _availableUsers = [
-    // Список доступных для добавления пользователей
-    'User1', 'User2', 'User3', 'User4', 'User5'
-  ];
+  TextEditingController _chatNameController = TextEditingController();
+  List<dynamic> _addedUsers = [];
+  List<dynamic> _availableUsers = [];
+  final String baseUrl = dotenv.get('BASEURL');
+  String? _currentUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUserId();
+  }
 
   @override
   void dispose() {
     _chatNameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCurrentUserId() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? userID = prefs.getString('id');
+
+    if (userID != null) {
+      setState(() {
+        _currentUserId = userID;
+      });
+      await _fetchFriends(userID);
+    }
+  }
+
+  Future<void> _fetchFriends(String userID) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/$userID/friends'),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _availableUsers = jsonDecode(response.body);
+        });
+      }
+    } catch (e) {
+      debugPrint("Ошибка загрузки списка друзей: $e");
+    }
   }
 
   @override
@@ -33,7 +70,6 @@ class _ChatCreationState extends State<ChatCreation> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Зона названия чата
             TextField(
               controller: _chatNameController,
               decoration: const InputDecoration(
@@ -66,7 +102,7 @@ class _ChatCreationState extends State<ChatCreation> {
                       itemBuilder: (context, index) {
                         return ListTile(
                           title: Text(
-                            _addedUsers[index],
+                            _addedUsers[index]['username'],
                             style: theme.textTheme.labelMedium,
                           ),
                           trailing: IconButton(
@@ -85,8 +121,6 @@ class _ChatCreationState extends State<ChatCreation> {
             ),
 
             const SizedBox(height: 20),
-
-            // Зона доступных пользователей
             Text(
               'Доступные пользователи:',
               style: theme.textTheme.labelLarge,
@@ -104,7 +138,7 @@ class _ChatCreationState extends State<ChatCreation> {
                   itemBuilder: (context, index) {
                     return ListTile(
                       title: Text(
-                        _availableUsers[index],
+                        _availableUsers[index]['username'],
                         style: theme.textTheme.labelMedium,
                       ),
                       trailing: IconButton(
