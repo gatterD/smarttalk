@@ -43,6 +43,8 @@ class _ChatCreationState extends State<ChatCreation> {
     }
   }
 
+  Future<void> chatCreate() async {}
+
   Future<void> _fetchFriends(String userID) async {
     try {
       final response = await http.get(
