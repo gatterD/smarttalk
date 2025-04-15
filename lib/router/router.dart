@@ -10,7 +10,10 @@ final router = {
   '/login': (context) => AutorisationScreen(),
   '/friend_list': (context) => FriendsListScreen(),
   '/register': (context) => RegisterScreen(),
-  '/message': (context) => UsersMessageScreen(usersName: ''),
+  '/message': (context) => UsersMessageScreen(
+        usersName: '',
+        isMultiConversation: false,
+      ),
   '/search': (context) => SearchScreen(),
   '/black_list': (context) => BlackListScreen(),
   '/chat-creation': (context) => ChatCreation(),

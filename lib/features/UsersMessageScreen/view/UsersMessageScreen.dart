@@ -7,7 +7,9 @@ import 'package:smarttalk/theme/theme.dart';
 
 class UsersMessageScreen extends StatefulWidget {
   final String usersName;
-  const UsersMessageScreen({super.key, required this.usersName});
+  final bool isMultiConversation;
+  const UsersMessageScreen(
+      {super.key, required this.usersName, required this.isMultiConversation});
 
   @override
   _UsersMessageScreenState createState() => _UsersMessageScreenState();
@@ -39,10 +41,12 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
 
   void _initializeData() async {
     await _loadCurrentUser();
-    await _loadSecondUserId();
-    await _initializeConversation();
-    await _getBlackList();
-    await _chekBlackList();
+    if (!widget.isMultiConversation) {
+      await _loadSecondUserId();
+      await _initializeConversation();
+      await _getBlackList();
+      await _chekBlackList();
+    } else {}
     _loadMessages();
   }
 

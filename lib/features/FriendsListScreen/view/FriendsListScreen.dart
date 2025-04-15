@@ -22,6 +22,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   List<dynamic> sortedFriends = [];
   List<dynamic> otherConversations = [];
   List<dynamic> otherConversationsIDs = [];
+  List<dynamic> multiConversations = [];
   List<int> friendsIDs = [];
 
   @override
@@ -43,6 +44,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       await fetchPinnedFriends();
       await fetchOtherConv();
       await _getFriendsIds();
+      await fetchMultiConv();
       List<dynamic> filteredFriends = friends
           .where((friend) => !pinnedFriendsList.contains(friend))
           .toList();
@@ -51,7 +53,8 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       sortedFriends = [
         ...pinnedFriendsList,
         ...filteredFriends,
-        ...otherConversations
+        ...otherConversations,
+        ...multiConversations,
       ];
     }
   }
@@ -281,20 +284,14 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
 
       if (response.statusCode == 200) {
         setState(() {
-          otherConversations = jsonDecode(response.body);
+          multiConversations = jsonDecode(response.body);
         });
-
-        for (var conv in otherConversations) {
-          if (conv['user1_id'].toString() == currentUserID) {
-            setState(() {
-              otherConversationsIDs.add(conv['user2_id'].toString());
-            });
-          } else if (conv['user2_id'].toString() == currentUserID) {
-            setState(() {
-              otherConversationsIDs.add(conv['user1_id'].toString());
-            });
-          }
-        }
+        multiConversations = multiConversations.map((conversation) {
+          return {
+            'id': conversation['id'],
+            'username': conversation['conversation_name'],
+          };
+        }).toList();
       } else {
         throw Exception(
             'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
@@ -302,6 +299,15 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     } catch (e) {
       debugPrint("Не удалось получить беседы нескольких пользователей: $e");
     }
+  }
+
+  bool isMiltiUser(String username_conv) {
+    for (var conv in multiConversations) {
+      if (conv['username'] == username_conv) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @override
@@ -447,6 +453,8 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                           MaterialPageRoute(
                             builder: (context) => UsersMessageScreen(
                               usersName: sortedFriends[index]['username'],
+                              isMultiConversation: isMiltiUser(
+                                  sortedFriends[index]['username'] ?? false),
                             ),
                           ),
                         );
