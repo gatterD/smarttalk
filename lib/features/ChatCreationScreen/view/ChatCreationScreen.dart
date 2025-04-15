@@ -43,8 +43,6 @@ class _ChatCreationState extends State<ChatCreation> {
     }
   }
 
-  Future<void> chatCreate() async {}
-
   Future<void> _fetchFriends(String userID) async {
     try {
       final response = await http.get(
@@ -58,6 +56,29 @@ class _ChatCreationState extends State<ChatCreation> {
       }
     } catch (e) {
       debugPrint("Ошибка загрузки списка друзей: $e");
+    }
+  }
+
+  Future<void> chatCreate() async {
+    try {
+      final chatName = _chatNameController.text;
+      final chatIDS = [int.parse(_currentUserId!)];
+      for (var item in _addedUsers) {
+        chatIDS.add(item['id']);
+      }
+      final response = await http.post(
+        Uri.parse('$baseUrl/multi/conversation/add'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"convname": chatName, "users": chatIDS}),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Беседа успешно создана')),
+        );
+      }
+    } catch (e) {
+      debugPrint("Ошибка ошибка добавления беседы: $e");
     }
   }
 
@@ -79,7 +100,6 @@ class _ChatCreationState extends State<ChatCreation> {
                 border: OutlineInputBorder(),
               ),
             ),
-
             const SizedBox(height: 20),
             Text(
               'Добавленные участники:',
@@ -121,7 +141,6 @@ class _ChatCreationState extends State<ChatCreation> {
                       },
                     ),
             ),
-
             const SizedBox(height: 20),
             Text(
               'Доступные пользователи:',
@@ -157,8 +176,6 @@ class _ChatCreationState extends State<ChatCreation> {
                 ),
               ),
             ),
-
-            // Кнопка создания чата
             Align(
               alignment: Alignment.centerRight,
               child: ElevatedButton(
@@ -170,19 +187,17 @@ class _ChatCreationState extends State<ChatCreation> {
                     return;
                   }
 
-                  if (_addedUsers.isEmpty) {
+                  if (_addedUsers.isEmpty || _addedUsers.length == 1) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content: Text('Добавьте хотя бы одного участника')),
+                          content: Text('Добавьте хотя бы двух участников')),
                     );
                     return;
                   }
 
-                  // Здесь логика создания чата
-                  print('Создан чат: ${_chatNameController.text}');
-                  print('Участники: $_addedUsers');
-
+                  chatCreate();
                   Navigator.pop(context);
+                  Navigator.pushNamed(context, "/friend_list");
                 },
                 child: const Text('Создать чат'),
               ),

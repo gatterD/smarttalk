@@ -273,6 +273,37 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     );
   }
 
+  Future<void> fetchMultiConv() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${dotenv.get('BASEURL')}/multi/conversation/$currentUserID'),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          otherConversations = jsonDecode(response.body);
+        });
+
+        for (var conv in otherConversations) {
+          if (conv['user1_id'].toString() == currentUserID) {
+            setState(() {
+              otherConversationsIDs.add(conv['user2_id'].toString());
+            });
+          } else if (conv['user2_id'].toString() == currentUserID) {
+            setState(() {
+              otherConversationsIDs.add(conv['user1_id'].toString());
+            });
+          }
+        }
+      } else {
+        throw Exception(
+            'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
+      }
+    } catch (e) {
+      debugPrint("Не удалось получить беседы нескольких пользователей: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -371,24 +402,6 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                     endActionPane: ActionPane(
                       motion: ScrollMotion(),
                       children: [
-                        friendsIDs.contains(sortedFriends[index]['id'])
-                            ? SlidableAction(
-                                onPressed: (context) {
-                                  _pinConv(
-                                      sortedFriends[index]['id'].toString());
-                                },
-                                backgroundColor: Colors.blue,
-                                icon: Icons.push_pin,
-                                label: 'Закрепить',
-                              )
-                            : Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
-                                child: Text(
-                                  'Not your friend.',
-                                  style: theme.textTheme.labelMedium,
-                                ),
-                              ),
                         SlidableAction(
                           onPressed: (context) {
                             delConversation(
