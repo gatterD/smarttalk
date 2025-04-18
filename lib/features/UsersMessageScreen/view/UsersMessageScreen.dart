@@ -8,8 +8,12 @@ import 'package:smarttalk/theme/theme.dart';
 class UsersMessageScreen extends StatefulWidget {
   final String usersName;
   final bool isMultiConversation;
+  final int convID;
   const UsersMessageScreen(
-      {super.key, required this.usersName, required this.isMultiConversation});
+      {super.key,
+      required this.usersName,
+      required this.isMultiConversation,
+      required this.convID});
 
   @override
   _UsersMessageScreenState createState() => _UsersMessageScreenState();
@@ -20,11 +24,11 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
   final TextEditingController _messageController = TextEditingController();
   late int currentUserId;
   late int conversationId;
-  late int secondUserID;
   late String currentUsername;
   List<dynamic> black_list = [];
   bool chekBLUser = false;
   late ScrollController _scrollController;
+  final baseUrl = dotenv.get('BASEURL');
 
   @override
   void initState() {
@@ -42,12 +46,13 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
   void _initializeData() async {
     await _loadCurrentUser();
     if (!widget.isMultiConversation) {
-      await _loadSecondUserId();
       await _initializeConversation();
       await _getBlackList();
       await _chekBlackList();
-    } else {}
-    _loadMessages();
+      _loadMessages();
+    } else {
+      await fetchMultiConvMessages();
+    }
   }
 
   // Прокручиваем список вниз
@@ -73,9 +78,8 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
   }
 
   Future<void> _getBlackList() async {
-    final baseUrl = dotenv.get('BASEURL');
     final response = await http.get(
-      Uri.parse('$baseUrl/black_list/$secondUserID'),
+      Uri.parse('$baseUrl/black_list/$widget.convID'),
     );
 
     if (response.statusCode == 200) {
@@ -112,12 +116,7 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
     }
   }
 
-  Future<void> _loadSecondUserId() async {
-    secondUserID = await _getUserIdByUsername(widget.usersName);
-  }
-
   Future<int> _getUserIdByUsername(String name) async {
-    final baseUrl = dotenv.get('BASEURL');
     final response = await http.get(
       Uri.parse('$baseUrl/user/name/$name'),
     );
@@ -132,7 +131,7 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
   Future<void> _initializeConversation() async {
     final convId = await getOrCreateConversation(
       currentUserId.toString(),
-      secondUserID.toString(),
+      widget.convID.toString(),
     );
     setState(() {
       conversationId = convId;
@@ -140,7 +139,6 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
   }
 
   Future<int> getOrCreateConversation(String user1Id, String user2Id) async {
-    final baseUrl = dotenv.get('BASEURL');
     final response = await http.get(
       Uri.parse(
           '$baseUrl/conversations/id?user1_id=$user1Id&user2_id=$user2Id'),
@@ -183,13 +181,53 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
       body: jsonEncode({
         'conversation_id': conversationId,
         'sender_id': currentUserId,
-        'receiver_id': secondUserID,
+        'receiver_id': widget.convID,
         'content': messageText,
       }),
     );
 
     if (response.statusCode == 201) {
       await _loadMessages();
+    } else {
+      debugPrint('Ошибка отправки сообщения');
+    }
+  }
+
+  Future<void> fetchMultiConvMessages() async {
+    try {
+      final response = await http.get(
+          Uri.parse('${dotenv.get('BASEURL')}/multi/chat/${widget.convID}'));
+      if (response.statusCode == 200) {
+        setState(() {
+          messages = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        });
+        _scrollToBottom();
+      } else {
+        throw Exception(response.body);
+      }
+    } catch (e) {
+      debugPrint("Не удалось получить ID: $e");
+    }
+  }
+
+  Future<void> sendNewMultiMessage() async {
+    if (_messageController.text.trim().isEmpty) return;
+    final messageText = _messageController.text.trim();
+    _messageController.clear();
+
+    final response = await http.post(
+      Uri.parse('${dotenv.get('BASEURL')}/multi/chat/add'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'conversation_id': widget.convID,
+        'sender_id': currentUserId,
+        'content': messageText,
+        'sender_name': currentUsername,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      await fetchMultiConvMessages();
     } else {
       debugPrint('Ошибка отправки сообщения');
     }
@@ -222,7 +260,9 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
                         child: Text(
                           message['sender_id'] == currentUserId
                               ? currentUsername
-                              : widget.usersName,
+                              : widget.isMultiConversation
+                                  ? message['sender_name']
+                                  : widget.usersName,
                           style: theme.textTheme.labelSmall,
                         ),
                       ),
@@ -298,7 +338,9 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
                         child: IconButton(
                           icon: const Icon(Icons.send_rounded,
                               color: Colors.white),
-                          onPressed: _sendMessage,
+                          onPressed: widget.isMultiConversation
+                              ? sendNewMultiMessage
+                              : _sendMessage,
                         ),
                       ),
                     ],

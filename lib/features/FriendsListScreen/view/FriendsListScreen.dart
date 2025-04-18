@@ -455,6 +455,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                               usersName: sortedFriends[index]['username'],
                               isMultiConversation: isMiltiUser(
                                   sortedFriends[index]['username'] ?? false),
+                              convID: int.parse(sortedFriends[index]['id']),
                             ),
                           ),
                         );

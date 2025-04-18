@@ -13,6 +13,7 @@ final router = {
   '/message': (context) => UsersMessageScreen(
         usersName: '',
         isMultiConversation: false,
+        convID: 0,
       ),
   '/search': (context) => SearchScreen(),
   '/black_list': (context) => BlackListScreen(),
