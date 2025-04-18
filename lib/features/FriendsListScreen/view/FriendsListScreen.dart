@@ -22,6 +22,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   List<dynamic> sortedFriends = [];
   List<dynamic> otherConversations = [];
   List<dynamic> otherConversationsIDs = [];
+  List<dynamic> multiConversations = [];
   List<int> friendsIDs = [];
 
   @override
@@ -43,6 +44,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       await fetchPinnedFriends();
       await fetchOtherConv();
       await _getFriendsIds();
+      await fetchMultiConv();
       List<dynamic> filteredFriends = friends
           .where((friend) => !pinnedFriendsList.contains(friend))
           .toList();
@@ -51,7 +53,8 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       sortedFriends = [
         ...pinnedFriendsList,
         ...filteredFriends,
-        ...otherConversations
+        ...otherConversations,
+        ...multiConversations,
       ];
     }
   }
@@ -273,6 +276,40 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     );
   }
 
+  Future<void> fetchMultiConv() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${dotenv.get('BASEURL')}/multi/conversation/$currentUserID'),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          multiConversations = jsonDecode(response.body);
+        });
+        multiConversations = multiConversations.map((conversation) {
+          return {
+            'id': conversation['id'],
+            'username': conversation['conversation_name'],
+          };
+        }).toList();
+      } else {
+        throw Exception(
+            'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
+      }
+    } catch (e) {
+      debugPrint("Не удалось получить беседы нескольких пользователей: $e");
+    }
+  }
+
+  bool isMiltiUser(String username_conv) {
+    for (var conv in multiConversations) {
+      if (conv['username'] == username_conv) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -306,6 +343,13 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
               title: Text('Настройки'),
               onTap: () {
                 // Навигация к экрану настроек
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.forum_outlined),
+              title: Text('Создание беседы'),
+              onTap: () {
+                Navigator.pushNamed(context, '/chat-creation');
               },
             ),
             ListTile(
@@ -364,24 +408,6 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                     endActionPane: ActionPane(
                       motion: ScrollMotion(),
                       children: [
-                        friendsIDs.contains(sortedFriends[index]['id'])
-                            ? SlidableAction(
-                                onPressed: (context) {
-                                  _pinConv(
-                                      sortedFriends[index]['id'].toString());
-                                },
-                                backgroundColor: Colors.blue,
-                                icon: Icons.push_pin,
-                                label: 'Закрепить',
-                              )
-                            : Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
-                                child: Text(
-                                  'Not your friend.',
-                                  style: theme.textTheme.labelMedium,
-                                ),
-                              ),
                         SlidableAction(
                           onPressed: (context) {
                             delConversation(
@@ -427,6 +453,9 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                           MaterialPageRoute(
                             builder: (context) => UsersMessageScreen(
                               usersName: sortedFriends[index]['username'],
+                              isMultiConversation: isMiltiUser(
+                                  sortedFriends[index]['username'] ?? false),
+                              convID: int.parse(sortedFriends[index]['id']),
                             ),
                           ),
                         );

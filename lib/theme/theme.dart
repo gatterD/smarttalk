@@ -10,7 +10,12 @@ final theme = ThemeData(
       )),
   buttonTheme: ButtonThemeData(),
   textTheme: TextTheme(
-      labelMedium: TextStyle(color: Color.fromRGBO(232, 241, 242, 1)),
+      labelLarge: TextStyle(
+          color: Color.fromRGBO(232, 241, 242, 1),
+          fontSize: 16,
+          fontWeight: FontWeight.bold),
+      labelMedium:
+          TextStyle(color: Color.fromRGBO(232, 241, 242, 1), fontSize: 14),
       labelSmall: TextStyle(
         color: Color.fromRGBO(232, 241, 242, 0.6),
         fontSize: 10,

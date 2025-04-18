@@ -3,10 +3,17 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:smarttalk/theme/theme.dart';
 
 class UsersMessageScreen extends StatefulWidget {
   final String usersName;
-  const UsersMessageScreen({super.key, required this.usersName});
+  final bool isMultiConversation;
+  final int convID;
+  const UsersMessageScreen(
+      {super.key,
+      required this.usersName,
+      required this.isMultiConversation,
+      required this.convID});
 
   @override
   _UsersMessageScreenState createState() => _UsersMessageScreenState();
@@ -17,27 +24,48 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
   final TextEditingController _messageController = TextEditingController();
   late int currentUserId;
   late int conversationId;
-  late int secondUserID;
   late String currentUsername;
   List<dynamic> black_list = [];
   bool chekBLUser = false;
+  late ScrollController _scrollController;
+  final baseUrl = dotenv.get('BASEURL');
 
   @override
   void initState() {
-    super.initState(); // Всегда вызывайте super.initState() первым
+    super.initState();
+    _scrollController = ScrollController();
     _initializeData();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _initializeData() async {
     await _loadCurrentUser();
-    await _loadSecondUserId();
-    await _initializeConversation();
-    await _getBlackList();
-    await _chekBlackList();
+    if (!widget.isMultiConversation) {
+      await _initializeConversation();
+      await _getBlackList();
+      await _chekBlackList();
+      _loadMessages();
+    } else {
+      await fetchMultiConvMessages();
+    }
+  }
 
-    debugPrint(chekBLUser.toString());
-    debugPrint(black_list.toString());
-    _loadMessages();
+  // Прокручиваем список вниз
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _chekBlackList() async {
@@ -50,51 +78,34 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
   }
 
   Future<void> _getBlackList() async {
-    final baseUrl = dotenv.get('BASEURL');
     final response = await http.get(
-      Uri.parse('$baseUrl/black_list/$secondUserID'),
+      Uri.parse('$baseUrl/black_list/$widget.convID'),
     );
 
     if (response.statusCode == 200) {
-      // Проверяем, что тело ответа не пустое
       if (response.body.isNotEmpty) {
         try {
-          // Декодируем JSON
           final decodedData = jsonDecode(response.body);
-
-          // Убедимся, что decodedData является списком
-          if (decodedData is List) {
-            setState(() {
-              black_list = decodedData;
-            });
-          } else {
-            // Если decodedData не список, инициализируем black_list пустым списком
-            setState(() {
-              black_list = [];
-            });
-          }
+          setState(() {
+            black_list = decodedData is List ? decodedData : [];
+          });
         } catch (e) {
-          // В случае ошибки декодирования, инициализируем black_list пустым списком
           debugPrint('Error decoding JSON: $e');
           setState(() {
             black_list = [];
           });
         }
       } else {
-        // Если тело ответа пустое, инициализируем black_list пустым списком
         setState(() {
           black_list = [];
         });
       }
     } else {
-      // Если статус код не 200, выводим ошибку
       debugPrint('Failed to load black list: ${response.statusCode}');
       setState(() {
         black_list = [];
       });
     }
-
-    debugPrint(black_list.toString());
   }
 
   Future<void> _loadCurrentUser() async {
@@ -105,12 +116,7 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
     }
   }
 
-  Future<void> _loadSecondUserId() async {
-    secondUserID = await _getUserIdByUsername(widget.usersName);
-  }
-
   Future<int> _getUserIdByUsername(String name) async {
-    final baseUrl = dotenv.get('BASEURL');
     final response = await http.get(
       Uri.parse('$baseUrl/user/name/$name'),
     );
@@ -125,7 +131,7 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
   Future<void> _initializeConversation() async {
     final convId = await getOrCreateConversation(
       currentUserId.toString(),
-      secondUserID.toString(),
+      widget.convID.toString(),
     );
     setState(() {
       conversationId = convId;
@@ -133,7 +139,6 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
   }
 
   Future<int> getOrCreateConversation(String user1Id, String user2Id) async {
-    final baseUrl = dotenv.get('BASEURL');
     final response = await http.get(
       Uri.parse(
           '$baseUrl/conversations/id?user1_id=$user1Id&user2_id=$user2Id'),
@@ -161,6 +166,7 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
       setState(() {
         messages = List<Map<String, dynamic>>.from(jsonDecode(response.body));
       });
+      _scrollToBottom();
     }
   }
 
@@ -169,27 +175,60 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
     final messageText = _messageController.text.trim();
     _messageController.clear();
 
-    // Добавляем сообщение в локальный список
-
     final response = await http.post(
       Uri.parse('${dotenv.get('BASEURL')}/messages'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'conversation_id': conversationId,
         'sender_id': currentUserId,
-        'receiver_id': secondUserID,
+        'receiver_id': widget.convID,
         'content': messageText,
       }),
     );
 
     if (response.statusCode == 201) {
-      // Обновляем сообщения после успешной отправки
-      _loadMessages();
+      await _loadMessages();
     } else {
-      // Если отправка не удалась, удаляем сообщение из локального списка
-      setState(() {
-        messages.removeLast();
-      });
+      debugPrint('Ошибка отправки сообщения');
+    }
+  }
+
+  Future<void> fetchMultiConvMessages() async {
+    try {
+      final response = await http.get(
+          Uri.parse('${dotenv.get('BASEURL')}/multi/chat/${widget.convID}'));
+      if (response.statusCode == 200) {
+        setState(() {
+          messages = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        });
+        _scrollToBottom();
+      } else {
+        throw Exception(response.body);
+      }
+    } catch (e) {
+      debugPrint("Не удалось получить ID: $e");
+    }
+  }
+
+  Future<void> sendNewMultiMessage() async {
+    if (_messageController.text.trim().isEmpty) return;
+    final messageText = _messageController.text.trim();
+    _messageController.clear();
+
+    final response = await http.post(
+      Uri.parse('${dotenv.get('BASEURL')}/multi/chat/add'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'conversation_id': widget.convID,
+        'sender_id': currentUserId,
+        'content': messageText,
+        'sender_name': currentUsername,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      await fetchMultiConvMessages();
+    } else {
       debugPrint('Ошибка отправки сообщения');
     }
   }
@@ -202,6 +241,7 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
         children: [
           Expanded(
             child: ListView.builder(
+              controller: _scrollController, // Привязываем контроллер
               padding: const EdgeInsets.all(8),
               itemCount: messages.length,
               itemBuilder: (context, index) {
@@ -210,17 +250,35 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
                   alignment: message['sender_id'] == currentUserId
                       ? Alignment.centerRight
                       : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: message['sender_id'] == currentUserId
-                          ? Colors.blue[100]
-                          : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(message['content']),
+                  child: Column(
+                    crossAxisAlignment: message['sender_id'] == currentUserId
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Text(
+                          message['sender_id'] == currentUserId
+                              ? currentUsername
+                              : widget.isMultiConversation
+                                  ? message['sender_name']
+                                  : widget.usersName,
+                          style: theme.textTheme.labelSmall,
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: message['sender_id'] == currentUserId
+                              ? Colors.blue[100]
+                              : Colors.grey[300],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(message['content']),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -240,21 +298,19 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
             ),
             child: chekBLUser
                 ? Container(
-                    width: double.infinity, // Растягиваем на всю ширину экрана
+                    width: double.infinity,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 16), // Отступы
+                        horizontal: 16, vertical: 16),
                     decoration: BoxDecoration(
-                      color: Colors.red, // Красный фон
-                      borderRadius:
-                          BorderRadius.circular(8), // Закругленные углы
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Center(
-                      // Центрируем текст
                       child: Text(
                         'Данный пользователь добавил вас в Черный список',
                         style: TextStyle(
-                          color: Colors.white, // Белый текст
-                          fontSize: 16, // Размер текста
+                          color: Colors.white,
+                          fontSize: 16,
                         ),
                       ),
                     ),
@@ -282,7 +338,9 @@ class _UsersMessageScreenState extends State<UsersMessageScreen> {
                         child: IconButton(
                           icon: const Icon(Icons.send_rounded,
                               color: Colors.white),
-                          onPressed: _sendMessage,
+                          onPressed: widget.isMultiConversation
+                              ? sendNewMultiMessage
+                              : _sendMessage,
                         ),
                       ),
                     ],

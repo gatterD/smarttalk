@@ -201,6 +201,8 @@ class _SearchScreenState extends State<SearchScreen> {
                           MaterialPageRoute(
                             builder: (context) => UsersMessageScreen(
                               usersName: user['username'],
+                              isMultiConversation: false,
+                              convID: user['id'],
                             ),
                           ),
                         );
