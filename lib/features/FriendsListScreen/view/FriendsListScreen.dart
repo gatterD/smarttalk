@@ -48,14 +48,21 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       List<dynamic> filteredFriends = friends
           .where((friend) => !pinnedFriendsList.contains(friend))
           .toList();
-      sortedFriends = [...pinnedFriendsList, ...filteredFriends];
+      if (!pinnedFriendsList.isEmpty) {
+        sortedFriends = [...pinnedFriendsList, ...filteredFriends];
+      } else {
+        sortedFriends = [...filteredFriends];
+      }
       await getOtherConversationsByID();
-      sortedFriends = [
-        ...pinnedFriendsList,
-        ...filteredFriends,
-        ...otherConversations,
-        ...multiConversations,
-      ];
+      debugPrint(otherConversations.toString());
+      if (!otherConversations.isEmpty) {
+        sortedFriends += [...otherConversations];
+      }
+      if (!multiConversations.isEmpty) {
+        sortedFriends += [
+          ...multiConversations,
+        ];
+      }
     }
   }
 
@@ -286,9 +293,12 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
         setState(() {
           multiConversations = jsonDecode(response.body);
         });
+        if (multiConversations.isEmpty) {
+          debugPrint('sus');
+        }
         multiConversations = multiConversations.map((conversation) {
           return {
-            'id': conversation['id'],
+            'id': int.parse(conversation['id']),
             'username': conversation['conversation_name'],
           };
         }).toList();
@@ -455,7 +465,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                               usersName: sortedFriends[index]['username'],
                               isMultiConversation: isMiltiUser(
                                   sortedFriends[index]['username'] ?? false),
-                              convID: int.parse(sortedFriends[index]['id']),
+                              convID: sortedFriends[index]['id'],
                             ),
                           ),
                         );
