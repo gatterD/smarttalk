@@ -201,6 +201,10 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           setState(() {
             otherConversations.removeWhere(
                 (conversation) => conversation['id'].toString() == friendID);
+            friends.removeWhere(
+                (conversation) => conversation['id'].toString() == friendID);
+            pinnedFriendsList.removeWhere(
+                (conversation) => conversation['id'].toString() == friendID);
           });
           List<dynamic> filteredFriends = friends
               .where((friend) => !pinnedFriendsList.contains(friend))
@@ -209,7 +213,8 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
             sortedFriends = [
               ...pinnedFriendsList,
               ...filteredFriends,
-              ...otherConversations
+              ...otherConversations,
+              ...multiConversations
             ];
           });
         } else {
