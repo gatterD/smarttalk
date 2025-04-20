@@ -72,7 +72,15 @@ class _BlackListScreenState extends State<BlackListScreen> {
                                   horizontal: 12, vertical: 8),
                             ),
                             onPressed: () {
-                              ;
+                              showRemoveConfirmationDialog(
+                                context: context,
+                                user: user,
+                                onConfirm: () {
+                                  context.read<BlackListBloc>().add(
+                                      RemoveFromBlackListEvent(
+                                          blockedUserId: user['id']));
+                                },
+                              );
                             },
                           ),
                         );

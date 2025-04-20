@@ -37,12 +37,21 @@ class BlackListBloc extends Bloc<BlackListEvent, BlackListState> {
       }
     });
 
-    on<LoadBlackListUser>((event, emit) async {});
-
     on<RemoveFromBlackListEvent>((event, emit) async {
+      if (userID == null) {
+        emit(BlackListErrorState("User ID not loaded"));
+        return;
+      }
+
+      emit(BlackListLoadingState());
+
       try {
         await _blackListRep.deleteFromBlackList(
             userBLID: event.blockedUserId, currentUserID: userID!);
+
+        List<dynamic> users = await _blackListRep.fetchBlackList(userID!);
+
+        emit(BlackListLoadedState(users));
       } catch (e) {
         emit(BlackListErrorState(e.toString()));
       }
