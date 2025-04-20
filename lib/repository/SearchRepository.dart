@@ -18,7 +18,7 @@ class SearchRepository {
     List<dynamic> friends = [];
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/users/$userID/friends'),
+        Uri.parse('$baseUrl/users/$userID/friendsids'),
       );
 
       if (response.statusCode == 200) {

@@ -14,6 +14,8 @@ class LoadingUsersSearchEvent extends SearchEvent {
   LoadingUsersSearchEvent(this.query);
 }
 
-class AddToFriendSearchEvent extends SearchEvent {}
+class AddToFriendSearchEvent extends SearchEvent {
+  final int friendId;
 
-class OpenDialogSearchEvent extends SearchEvent {}
+  AddToFriendSearchEvent(this.friendId);
+}

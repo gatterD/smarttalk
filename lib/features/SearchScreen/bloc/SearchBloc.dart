@@ -15,6 +15,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       emit(LoadingSearchState());
       try {
         userID = await _searchRepository.loadCurrentUserId();
+
+        emit(LoadedUserIDSearchState());
       } catch (e) {
         emit(ErrorSearchState(e.toString()));
       }
@@ -32,11 +34,13 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     });
 
     on<LoadingFriendsSearchEvent>((event, emit) async {
+      emit(LoadingSearchState());
       try {
         if (userID == null) {
           throw "Have no user ID";
         }
         friends = await _searchRepository.fetchFriends(userID!);
+        emit(LoadedInitialSearchState());
       } catch (e) {
         emit(ErrorSearchState(e.toString()));
       }
@@ -49,7 +53,19 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         }
         List<dynamic>? users;
         users = await _searchRepository.searchUsers(event.query, black_list!);
-        emit(LoadedSearchState(users, friends!));
+        emit(LoadedSearchState(users, friends!, int.parse(userID!)));
+      } catch (e) {
+        emit(ErrorSearchState(e.toString()));
+      }
+    });
+
+    on<AddToFriendSearchEvent>((event, emit) async {
+      try {
+        if (userID == null) {
+          throw "Have no user ID";
+        }
+        _searchRepository.addFriend(event.friendId, int.parse(userID!));
+        emit(SuccsesfulAddFriendSearchState());
       } catch (e) {
         emit(ErrorSearchState(e.toString()));
       }

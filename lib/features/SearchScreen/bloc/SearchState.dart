@@ -6,11 +6,14 @@ class InitialSearchState extends SearchState {}
 
 class LoadingSearchState extends SearchState {}
 
+class LoadedUserIDSearchState extends SearchState {}
+
 class LoadedSearchState extends SearchState {
   final List<dynamic> users;
   final List<dynamic> friends;
+  final int userID;
 
-  LoadedSearchState(this.users, this.friends);
+  LoadedSearchState(this.users, this.friends, this.userID);
 }
 
 class ErrorSearchState extends SearchState {
@@ -18,3 +21,7 @@ class ErrorSearchState extends SearchState {
 
   ErrorSearchState(this.error);
 }
+
+class SuccsesfulAddFriendSearchState extends SearchState {}
+
+class LoadedInitialSearchState extends SearchState {}

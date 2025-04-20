@@ -17,7 +17,6 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _searchBloc = BlocProvider.of<SearchBloc>(context);
-    // Загружаем необходимые данные при инициализации
     _searchBloc.add(LoadingUserIDSearchEvent());
     _searchBloc.add(LoadingBlackListSearchEvent());
     _searchBloc.add(LoadingFriendsSearchEvent());
@@ -30,8 +29,6 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<bool> _addFriend(String friendId) async {
-    // TODO: Реализовать добавление в друзья через репозиторий
-    // Пока просто возвращаем true для демонстрации
     return true;
   }
 
@@ -61,13 +58,24 @@ class _SearchScreenState extends State<SearchScreen> {
             return Center(child: CircularProgressIndicator());
           }
 
+          if (state is LoadedInitialSearchState) {
+            return Center(
+                child: Text(
+              "Enter search request",
+              style: theme.textTheme.labelLarge,
+            ));
+          }
+
           if (state is LoadedSearchState) {
             return ListView.builder(
               itemCount: state.users.length,
               itemBuilder: (context, index) {
                 final user = state.users[index];
-                final isFriend = state.friends.contains(user['id']);
-
+                bool isFriend = false;
+                if (state.friends.contains(user['id']) ||
+                    user['id'] == state.userID) {
+                  isFriend = true;
+                }
                 return ListTile(
                   leading: CircleAvatar(child: Text(user['username'][0])),
                   title: Text(
@@ -83,10 +91,13 @@ class _SearchScreenState extends State<SearchScreen> {
                       : IconButton(
                           icon: Icon(Icons.person_add, color: Colors.blue),
                           onPressed: () async {
-                            bool success = await _addFriend(user['id']);
+                            bool success =
+                                await _addFriend(user['id'].toString());
                             if (success) {
-                              // Обновляем список друзей
+                              _searchBloc
+                                  .add(AddToFriendSearchEvent(user['id']));
                               _searchBloc.add(LoadingFriendsSearchEvent());
+
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                     content: Text(
