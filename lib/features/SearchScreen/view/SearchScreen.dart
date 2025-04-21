@@ -124,8 +124,7 @@ class _SearchScreenState extends State<SearchScreen> {
             );
           }
 
-          // Initial state
-          return Center(child: Text("Введите запрос для поиска пользователей"));
+          return Center(child: Text("Enter search request"));
         },
       ),
     );

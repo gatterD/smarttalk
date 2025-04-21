@@ -17,5 +17,5 @@ final router = {
       ),
   '/search': (context) => SearchScreen(),
   '/black_list': (context) => BlackListScreen(),
-  '/chat-creation': (context) => ChatCreation(),
+  '/chat-creation': (context) => ChatCreationScreen(),
 };
