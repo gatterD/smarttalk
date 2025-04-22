@@ -1,487 +1,364 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:smarttalk/features/UsersMessageScreen/UsersMessage.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:smarttalk/theme/theme.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:smarttalk/features/UsersMessageScreen/UsersMessage.dart';
+import 'package:smarttalk/theme/theme.dart';
 import '../../AutorisationScreen/Autorisation.dart';
+import 'package:smarttalk/features/FriendsListScreen/bloc/FriendsListBloc.dart';
+import 'package:smarttalk/repository/FriendsListRepository.dart';
+import 'package:smarttalk/theme/colors.dart';
 
-class FriendsListScreen extends StatefulWidget {
+class FriendsListScreen extends StatelessWidget {
+  const FriendsListScreen({super.key});
+
   @override
-  _FriendsListScreenState createState() => _FriendsListScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) =>
+          FriendsBloc(FriendsRepository())..add(LoadFriendsEvent()),
+      child: Scaffold(
+        drawer: const FriendsDrawer(),
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: const Text('SmartTalk'),
+          centerTitle: true,
+          leading: Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            ),
+          ),
+          actions: [
+            IconButton(
+              onPressed: () => Navigator.pushNamed(context, '/search'),
+              icon: const Icon(Icons.search),
+              tooltip: 'Search',
+            )
+          ],
+          elevation: 0,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(
+              bottom: Radius.circular(16),
+            ),
+          ),
+        ),
+        body: BlocBuilder<FriendsBloc, FriendsState>(
+          builder: (context, state) {
+            if (state is FriendsLoadingState) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(AppColors.drawerDivider),
+                ),
+              );
+            } else if (state is FriendsErrorState) {
+              return Center(
+                child: Text(
+                  state.error,
+                  style: theme.textTheme.labelMedium
+                      ?.copyWith(color: Colors.red[200]),
+                ),
+              );
+            } else if (state is FriendsLoadedState) {
+              return FriendsListView(state: state);
+            }
+            return Container();
+          },
+        ),
+      ),
+    );
+  }
 }
 
-class _FriendsListScreenState extends State<FriendsListScreen> {
-  List<dynamic> friends = [];
-  String? currentUserID;
-  String? currentUsername;
-  List<dynamic> pinnedFriends = [];
-  List<dynamic> pinnedFriendsList = [];
-  List<dynamic> sortedFriends = [];
-  List<dynamic> otherConversations = [];
-  List<dynamic> otherConversationsIDs = [];
-  List<dynamic> multiConversations = [];
-  List<int> friendsIDs = [];
+class FriendsDrawer extends StatelessWidget {
+  const FriendsDrawer({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    _loadCurrentUser();
-  }
-
-  Future<void> _loadCurrentUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userID = prefs.getString('id');
-    final username = prefs.getString('username');
-    if (userID != null) {
-      setState(() {
-        currentUserID = userID;
-        currentUsername = username;
-      });
-      await fetchFriends();
-      await fetchPinnedFriends();
-      await fetchOtherConv();
-      await _getFriendsIds();
-      await fetchMultiConv();
-      List<dynamic> filteredFriends = friends
-          .where((friend) => !pinnedFriendsList.contains(friend))
-          .toList();
-      if (!pinnedFriendsList.isEmpty) {
-        sortedFriends = [...pinnedFriendsList, ...filteredFriends];
-      } else {
-        sortedFriends = [...filteredFriends];
-      }
-      await getOtherConversationsByID();
-      debugPrint(otherConversations.toString());
-      if (!otherConversations.isEmpty) {
-        sortedFriends += [...otherConversations];
-      }
-      if (!multiConversations.isEmpty) {
-        sortedFriends += [
-          ...multiConversations,
-        ];
-      }
-    }
-  }
-
-  Future<void> getOtherConversationsByID() async {
-    for (var friend in sortedFriends) {
-      if (otherConversationsIDs.contains(friend['id'].toString())) {
-        otherConversationsIDs.remove(friend['id'].toString());
-      }
-    }
-    if (otherConversationsIDs.isNotEmpty) {
-      otherConversations.clear();
-      for (var ID in otherConversationsIDs) {
-        try {
-          final response = await http.get(
-            Uri.parse('${dotenv.get('BASEURL')}/user/$ID'),
-          );
-
-          if (response.statusCode == 200) {
-            setState(() {
-              otherConversations.add(jsonDecode(response.body));
-            });
-          } else {
-            throw Exception(
-                'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
-          }
-        } catch (e) {
-          debugPrint('❌ Ошибка сети: $e');
+  Widget build(BuildContext context) {
+    return BlocBuilder<FriendsBloc, FriendsState>(
+      builder: (context, state) {
+        String username = '';
+        if (state is FriendsLoadedState) {
+          username = state.currentUsername;
         }
-      }
-    }
-  }
 
-  Future<void> fetchPinnedFriends() async {
-    if (currentUserID == null) return;
-
-    try {
-      final response = await http.get(
-        Uri.parse(
-            '${dotenv.get('BASEURL')}/pinned/$currentUserID/conversations'),
-      );
-      if (response.statusCode == 200) {
-        setState(() {
-          pinnedFriends = jsonDecode(response.body);
-          pinnedFriendsList = pinnedFriends.map((id) {
-            return friends.firstWhere((friend) => friend["id"] == id,
-                orElse: () => null);
-          }).toList();
-        });
-      } else {
-        throw Exception(
-            'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
-      }
-    } catch (e) {
-      debugPrint('❌ Ошибка сети: $e');
-    }
-  }
-
-  Future<void> fetchOtherConv() async {
-    if (currentUserID == null) return;
-
-    try {
-      final response = await http.get(
-        Uri.parse('${dotenv.get('BASEURL')}/conversation/$currentUserID'),
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          otherConversations = jsonDecode(response.body);
-        });
-
-        for (var conv in otherConversations) {
-          if (conv['user1_id'].toString() == currentUserID) {
-            setState(() {
-              otherConversationsIDs.add(conv['user2_id'].toString());
-            });
-          } else if (conv['user2_id'].toString() == currentUserID) {
-            setState(() {
-              otherConversationsIDs.add(conv['user1_id'].toString());
-            });
-          }
-        }
-      } else {
-        throw Exception(
-            'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
-      }
-    } catch (e) {
-      debugPrint('❌ Ошибка сети: $e');
-    }
-  }
-
-  Future<void> fetchFriends() async {
-    if (currentUserID == null) return;
-
-    try {
-      final response = await http.get(
-        Uri.parse('${dotenv.get('BASEURL')}/users/$currentUserID/friends'),
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          friends = jsonDecode(response.body);
-        });
-      } else {
-        throw Exception(
-            'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
-      }
-    } catch (e) {
-      debugPrint('❌ Ошибка сети: $e');
-    }
-  }
-
-  Future<void> _getFriendsIds() async {
-    for (var friend in friends) {
-      friendsIDs.add(await friend['id']);
-    }
-  }
-
-  Future<void> delConversation(String friendID) async {
-    try {
-      final response = await http.post(
-        Uri.parse('${dotenv.get('BASEURL')}/delete/conversation'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'friendID': friendID, 'userID': currentUserID}),
-      );
-      if (response.statusCode == 200) {
-        bool chekFindNotFriend = true;
-        for (var friend in friends) {
-          if (friend['id'].toString() == friendID) {
-            chekFindNotFriend = true;
-          } else {
-            chekFindNotFriend = false;
-            break;
-          }
-        }
-        if (!chekFindNotFriend) {
-          setState(() {
-            otherConversations.removeWhere(
-                (conversation) => conversation['id'].toString() == friendID);
-            friends.removeWhere(
-                (conversation) => conversation['id'].toString() == friendID);
-            pinnedFriendsList.removeWhere(
-                (conversation) => conversation['id'].toString() == friendID);
-          });
-          List<dynamic> filteredFriends = friends
-              .where((friend) => !pinnedFriendsList.contains(friend))
-              .toList();
-          setState(() {
-            sortedFriends = [
-              ...pinnedFriendsList,
-              ...filteredFriends,
-              ...otherConversations,
-              ...multiConversations
-            ];
-          });
-        } else {
-          setState(() {
-            friends.removeWhere(
-                (conversation) => conversation['id'].toString() == friendID);
-          });
-          List<dynamic> filteredFriends = friends
-              .where((friend) => !pinnedFriendsList.contains(friend))
-              .toList();
-          setState(() {
-            sortedFriends = [
-              ...pinnedFriendsList,
-              ...filteredFriends,
-              ...otherConversations
-            ];
-          });
-        }
-      } else {
-        throw Exception(
-            'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
-      }
-    } catch (e) {
-      debugPrint('❌ Ошибка сети: $e');
-    }
-  }
-
-  Future<void> _pinConv(String friendId) async {
-    try {
-      final response = await http.post(
-        Uri.parse('${dotenv.get('BASEURL')}/pinned'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'id': currentUserID, 'friendId': friendId}),
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          pinnedFriends.add(friendId);
-        });
-
-        await fetchFriends();
-        await fetchPinnedFriends();
-        List<dynamic> filteredFriends = friends
-            .where((friend) => !pinnedFriendsList.contains(friend))
-            .toList();
-
-        setState(() {
-          sortedFriends = [
-            ...pinnedFriendsList,
-            ...filteredFriends,
-            ...otherConversations
-          ];
-        });
-      } else {
-        throw Exception(
-            'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
-      }
-    } catch (e) {
-      debugPrint('❌ Ошибка сети: $e');
-    }
-  }
-
-  Future<void> _logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
-    await prefs.remove('username');
-    await prefs.remove('id');
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => AutorisationScreen()),
+        return Drawer(
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.horizontal(right: Radius.circular(16)),
+          ),
+          child: Column(
+            children: [
+              UserAccountsDrawerHeader(
+                accountName: Text(
+                  username.isNotEmpty ? username : 'Загрузка...',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontSize: 20,
+                    color: Colors.white,
+                  ),
+                ),
+                accountEmail: null,
+                currentAccountPicture: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.lightText,
+                        AppColors.accent,
+                      ],
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    backgroundColor: AppColors.lightText,
+                    child: Text(
+                      username.isNotEmpty ? username[0].toUpperCase() : '?',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.primary,
+                      AppColors.background,
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _buildDrawerItem(
+                      icon: Icons.settings,
+                      text: 'Настройки',
+                      onTap: () {},
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.forum_outlined,
+                      text: 'Создание беседы',
+                      onTap: () =>
+                          Navigator.pushNamed(context, '/chat-creation'),
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.no_accounts_sharp,
+                      text: 'Черный список',
+                      onTap: () => Navigator.pushNamed(context, '/black_list'),
+                    ),
+                    const Divider(
+                      color: AppColors.drawerDivider,
+                      indent: 16,
+                      endIndent: 16,
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.exit_to_app,
+                      text: 'Выйти',
+                      onTap: () {
+                        context.read<FriendsBloc>().add(LogoutEvent());
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => AutorisationScreen()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Future<void> fetchMultiConv() async {
-    try {
-      final response = await http.get(
-        Uri.parse('${dotenv.get('BASEURL')}/multi/conversation/$currentUserID'),
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          multiConversations = jsonDecode(response.body);
-        });
-        if (multiConversations.isEmpty) {
-          debugPrint('sus');
-        }
-        multiConversations = multiConversations.map((conversation) {
-          return {
-            'id': int.parse(conversation['id']),
-            'username': conversation['conversation_name'],
-          };
-        }).toList();
-      } else {
-        throw Exception(
-            'Ошибка загрузки списка друзей (Код: ${response.statusCode})');
-      }
-    } catch (e) {
-      debugPrint("Не удалось получить беседы нескольких пользователей: $e");
-    }
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String text,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: AppColors.backgroundLight,
+      ),
+      title: Text(
+        text,
+        style: theme.textTheme.titleMedium,
+      ),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+      minLeadingWidth: 24,
+    );
   }
+}
 
-  bool isMiltiUser(String username_conv) {
-    for (var conv in multiConversations) {
-      if (conv['username'] == username_conv) {
-        return true;
-      }
-    }
-    return false;
+class FriendsListView extends StatelessWidget {
+  final FriendsLoadedState state;
+
+  const FriendsListView({super.key, required this.state});
+
+  bool isMultiUser(String username) {
+    return state.multiConversations.any((conv) => conv['username'] == username);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: Drawer(
-        child: Column(
-          children: [
-            UserAccountsDrawerHeader(
-              accountName: Text(
-                currentUsername ?? 'Загрузка...',
+    return RefreshIndicator(
+      backgroundColor: AppColors.background,
+      color: AppColors.lightText,
+      onRefresh: () async =>
+          context.read<FriendsBloc>().add(LoadFriendsEvent()),
+      child: state.sortedFriends.isEmpty
+          ? Center(
+              child: Text(
+                'You have no contacts :(',
                 style: theme.textTheme.labelMedium?.copyWith(
-                  fontSize: 20,
-                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              accountEmail: null,
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Text(
-                  currentUsername != null && currentUsername!.isNotEmpty
-                      ? currentUsername![0].toUpperCase()
-                      : '?',
-                  style: TextStyle(fontSize: 24),
-                ),
-              ),
-              decoration: BoxDecoration(
-                color: theme.appBarTheme.backgroundColor,
-              ),
-            ),
-            ListTile(
-              leading: Icon(Icons.settings),
-              title: Text('Настройки'),
-              onTap: () {
-                // Навигация к экрану настроек
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.forum_outlined),
-              title: Text('Создание беседы'),
-              onTap: () {
-                Navigator.pushNamed(context, '/chat-creation');
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.no_accounts_sharp),
-              title: Text('Черный список'),
-              onTap: () {
-                Navigator.pushNamed(context, '/black_list');
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.exit_to_app),
-              title: Text('Выйти'),
-              onTap: _logout,
-            ),
-          ],
-        ),
-      ),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Text('SmartTalk'),
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: Icon(Icons.menu),
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
-            },
-          ),
-        ),
-        actions: [
-          IconButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/search');
-              },
-              icon: Icon(Icons.search))
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: fetchFriends,
-        child: sortedFriends.isEmpty
-            ? Center(
-                child: sortedFriends.isEmpty
-                    ? Text(
-                        'You have no contacts :(',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                            fontSize: 18, fontWeight: FontWeight.bold),
-                      )
-                    : CircularProgressIndicator(),
-              )
-            : ListView.separated(
-                itemCount: sortedFriends.length,
-                itemBuilder: (context, index) {
-                  final isPinned =
-                      pinnedFriends.contains(sortedFriends[index]["id"]);
-                  return Slidable(
-                    key: ValueKey(sortedFriends[index]['id']),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: state.sortedFriends.length,
+              itemBuilder: (context, index) {
+                final friend = state.sortedFriends[index];
+                final isPinned = state.pinnedFriends.contains(friend["id"]);
+
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Slidable(
+                    key: ValueKey(friend['id']),
                     endActionPane: ActionPane(
-                      motion: ScrollMotion(),
+                      motion: const ScrollMotion(),
                       children: [
                         SlidableAction(
                           onPressed: (context) {
-                            delConversation(
-                                sortedFriends[index]['id'].toString());
+                            context.read<FriendsBloc>().add(
+                                  DeleteConversationEvent(
+                                      friend['id'].toString()),
+                                );
                           },
-                          backgroundColor: Colors.red,
+                          backgroundColor: Colors.red[400]!,
+                          foregroundColor: Colors.white,
                           icon: Icons.delete,
                           label: 'Удалить',
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ],
                     ),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        child:
-                            sortedFriends[index]['username'] == currentUsername
-                                ? Icon(Icons.bookmark_border)
-                                : Icon(Icons.person),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.background,
+                            AppColors.backgroundLight,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      title: sortedFriends[index]['username'] == currentUsername
-                          ? Text('Favorite', style: theme.textTheme.labelMedium)
-                          : Text(sortedFriends[index]['username'],
-                              style: theme.textTheme.labelMedium),
-                      subtitle: Text(
-                        'ID: ${sortedFriends[index]['id']}',
-                        style: theme.textTheme.labelSmall,
-                      ),
-                      trailing: isPinned
-                          ? Icon(Icons.push_pin_rounded)
-                          : friendsIDs.contains(sortedFriends[index]['id'])
-                              ? IconButton(
-                                  onPressed: () {
-                                    _pinConv(
-                                        sortedFriends[index]['id'].toString());
-                                  },
-                                  icon: Icon(
-                                    Icons.push_pin_outlined,
-                                    color: Colors.white,
-                                  ))
-                              : Icon(Icons.no_accounts),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => UsersMessageScreen(
-                              usersName: sortedFriends[index]['username'],
-                              isMultiConversation: isMiltiUser(
-                                  sortedFriends[index]['username'] ?? false),
-                              convID: sortedFriends[index]['id'],
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        leading: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.primary,
+                                AppColors.accent,
+                              ],
                             ),
                           ),
-                        );
-                      },
+                          child: Center(
+                            child: friend['username'] == state.currentUsername
+                                ? const Icon(Icons.bookmark, size: 20)
+                                : Text(
+                                    friend['username'][0].toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        title: Text(
+                          friend['username'] == state.currentUsername
+                              ? 'Favorite'
+                              : friend['username'],
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'ID: ${friend['id']}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 12,
+                          ),
+                        ),
+                        trailing: isPinned
+                            ? const Icon(
+                                Icons.push_pin,
+                                color: Color.fromRGBO(36, 123, 160, 1),
+                              )
+                            : state.sortedFriends
+                                    .any((f) => f['id'] == friend['id'])
+                                ? IconButton(
+                                    onPressed: () {
+                                      context.read<FriendsBloc>().add(
+                                            PinConversationEvent(
+                                                friend['id'].toString()),
+                                          );
+                                    },
+                                    icon: const Icon(
+                                      Icons.push_pin_outlined,
+                                      color: AppColors.drawerDivider,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.no_accounts,
+                                    color: AppColors.drawerDivider,
+                                  ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => UsersMessageScreen(
+                                usersName: friend['username'],
+                                isMultiConversation:
+                                    isMultiUser(friend['username']),
+                                convID: friend['id'],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  );
-                },
-                separatorBuilder: (BuildContext context, int index) =>
-                    Divider(),
-              ),
-      ),
+                  ),
+                );
+              },
+              separatorBuilder: (BuildContext context, int index) =>
+                  const SizedBox(height: 12),
+            ),
     );
   }
 }

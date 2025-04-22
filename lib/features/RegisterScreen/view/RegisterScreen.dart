@@ -28,6 +28,14 @@ class RegisterScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 32.0),
+                  child: Image.asset(
+                    'assets/images/smarttalk_logo.png',
+                    width: MediaQuery.of(context).size.width * 0.5,
+                    fit: BoxFit.contain,
+                  ),
+                ),
                 _buildUsernameField(),
                 const SizedBox(height: 20),
                 _buildPasswordField(),
