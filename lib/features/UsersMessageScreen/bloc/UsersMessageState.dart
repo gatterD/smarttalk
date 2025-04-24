@@ -9,6 +9,7 @@ class UsersMessageLoading extends UsersMessageState {}
 class UsersMessageLoaded extends UsersMessageState {
   final List<dynamic> messages;
   final int currentUserId;
+  final int secondUserID;
   final int conversationId;
   final String currentUsername;
   final List<dynamic> blackList;
@@ -21,6 +22,7 @@ class UsersMessageLoaded extends UsersMessageState {
     required this.currentUsername,
     required this.blackList,
     required this.isBlocked,
+    required this.secondUserID,
   });
 
   UsersMessageLoaded copyWith({
@@ -30,6 +32,7 @@ class UsersMessageLoaded extends UsersMessageState {
     String? currentUsername,
     List<dynamic>? blackList,
     bool? isBlocked,
+    int? secondUserID,
   }) {
     return UsersMessageLoaded(
       messages: messages ?? this.messages,
@@ -38,6 +41,7 @@ class UsersMessageLoaded extends UsersMessageState {
       currentUsername: currentUsername ?? this.currentUsername,
       blackList: blackList ?? this.blackList,
       isBlocked: isBlocked ?? this.isBlocked,
+      secondUserID: secondUserID ?? this.secondUserID,
     );
   }
 }

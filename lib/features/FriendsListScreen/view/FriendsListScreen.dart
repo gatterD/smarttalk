@@ -35,12 +35,6 @@ class FriendsListScreen extends StatelessWidget {
               tooltip: 'Search',
             )
           ],
-          elevation: 0,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(
-              bottom: Radius.circular(16),
-            ),
-          ),
         ),
         body: BlocBuilder<FriendsBloc, FriendsState>(
           builder: (context, state) {

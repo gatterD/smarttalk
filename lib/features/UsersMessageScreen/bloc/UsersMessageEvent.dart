@@ -5,19 +5,19 @@ abstract class UsersMessageEvent {}
 class LoadInitialData extends UsersMessageEvent {
   final bool isMultiConversation;
   final int convID;
+  final String secondUserName;
 
-  LoadInitialData({required this.isMultiConversation, required this.convID});
+  LoadInitialData(
+      {required this.isMultiConversation,
+      required this.convID,
+      required this.secondUserName});
 }
 
 class SendMessage extends UsersMessageEvent {
   final String message;
   final bool isMultiConversation;
-  final TextEditingController messageController;
 
-  SendMessage(
-      {required this.messageController,
-      required this.message,
-      required this.isMultiConversation});
+  SendMessage({required this.message, required this.isMultiConversation});
 }
 
 class LoadMoreMessages extends UsersMessageEvent {}

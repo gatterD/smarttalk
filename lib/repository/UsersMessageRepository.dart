@@ -98,11 +98,10 @@ class UsersMessageRepository {
     return [];
   }
 
-  Future<void> sendMessage(TextEditingController messageController,
-      int conversationId, int currentUserId, int convID) async {
-    if (messageController.text.trim().isEmpty) return;
-    final messageText = messageController.text.trim();
-    messageController.clear();
+  Future<void> sendMessage(
+      String content, int conversationId, int currentUserId, int convID) async {
+    if (content.isEmpty) return;
+    final messageText = content;
 
     final response = await http.post(
       Uri.parse('${dotenv.get('BASEURL')}/messages'),
@@ -137,11 +136,10 @@ class UsersMessageRepository {
     return [];
   }
 
-  Future<void> sendNewMultiMessage(TextEditingController messageController,
-      int convID, int currentUserId, String currentUsername) async {
-    if (messageController.text.trim().isEmpty) return;
-    final messageText = messageController.text.trim();
-    messageController.clear();
+  Future<void> sendNewMultiMessage(String content, int convID,
+      int currentUserId, String currentUsername) async {
+    if (content.isEmpty) return;
+    final messageText = content;
 
     final response = await http.post(
       Uri.parse('${dotenv.get('BASEURL')}/multi/chat/add'),

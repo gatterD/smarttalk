@@ -23,6 +23,7 @@ class UsersMessageScreen extends StatelessWidget {
         ..add(LoadInitialData(
           isMultiConversation: isMultiConversation,
           convID: convID,
+          secondUserName: usersName,
         )),
       child: _UsersMessageView(
         usersName: usersName,
@@ -74,6 +75,7 @@ class _UsersMessageView extends StatelessWidget {
           } else if (state is UsersMessageError) {
             return Center(child: Text('Error: ${state.message}'));
           } else if (state is UsersMessageLoaded) {
+            _scrollToBottom();
             return Column(
               children: [
                 Expanded(
@@ -104,19 +106,25 @@ class _UsersMessageView extends StatelessWidget {
                                 style: theme.textTheme.labelSmall,
                               ),
                             ),
-                            Container(
-                              margin: const EdgeInsets.symmetric(vertical: 4),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color:
-                                    message['sender_id'] == state.currentUserId
-                                        ? Colors.blue[100]
-                                        : Colors.grey[300],
-                                borderRadius: BorderRadius.circular(12),
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: MediaQuery.of(context).size.width *
+                                    0.8, // 80% ширины экрана
                               ),
-                              child: Text(message['content']),
-                            ),
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: message['sender_id'] ==
+                                          state.currentUserId
+                                      ? Colors.blue[100]
+                                      : Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(message['content']),
+                              ),
+                            )
                           ],
                         ),
                       );
@@ -181,7 +189,6 @@ class _UsersMessageView extends StatelessWidget {
                                 onPressed: () {
                                   context.read<UsersMessageBloc>().add(
                                         SendMessage(
-                                          messageController: _messageController,
                                           message: _messageController.text,
                                           isMultiConversation:
                                               isMultiConversation,

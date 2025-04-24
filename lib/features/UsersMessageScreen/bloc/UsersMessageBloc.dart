@@ -13,6 +13,7 @@ class UsersMessageBloc extends Bloc<UsersMessageEvent, UsersMessageState> {
   late int _currentUserId;
   late String _currentUsername;
   late int _conversationId;
+  late int _secondUserID;
   List<dynamic> _blackList = [];
   bool _isBlocked = false;
 
@@ -26,13 +27,14 @@ class UsersMessageBloc extends Bloc<UsersMessageEvent, UsersMessageState> {
     emit(UsersMessageLoading());
 
     try {
-      // Загружаем текущего пользователя
       _currentUserId = await _repository.loadCurrentUser();
       final prefs = await SharedPreferences.getInstance();
       _currentUsername = prefs.getString('username') ?? '';
 
       if (!event.isMultiConversation) {
         // Для личных сообщений
+        _secondUserID =
+            await _repository.getUserIdByUsername(event.secondUserName);
         _conversationId = await _repository.initializeConversation(
             _currentUserId, event.convID);
         _blackList = await _repository.getBlackList(event.convID.toString());
@@ -42,13 +44,13 @@ class UsersMessageBloc extends Bloc<UsersMessageEvent, UsersMessageState> {
         final messages = await _repository.loadMessages(_conversationId);
 
         emit(UsersMessageLoaded(
-          messages: messages,
-          currentUserId: _currentUserId,
-          conversationId: _conversationId,
-          currentUsername: _currentUsername,
-          blackList: _blackList,
-          isBlocked: _isBlocked,
-        ));
+            messages: messages,
+            currentUserId: _currentUserId,
+            conversationId: _conversationId,
+            currentUsername: _currentUsername,
+            blackList: _blackList,
+            isBlocked: _isBlocked,
+            secondUserID: _secondUserID));
       } else {
         // Для групповых чатов
         final messages = await _repository.fetchMultiConvMessages(event.convID);
@@ -60,6 +62,7 @@ class UsersMessageBloc extends Bloc<UsersMessageEvent, UsersMessageState> {
           currentUsername: _currentUsername,
           blackList: [],
           isBlocked: false,
+          secondUserID: event.convID,
         ));
       }
     } catch (e) {
@@ -76,21 +79,20 @@ class UsersMessageBloc extends Bloc<UsersMessageEvent, UsersMessageState> {
     try {
       if (!event.isMultiConversation) {
         await _repository.sendMessage(
-          event.messageController, // Нужно передать контроллер или текст
+          event.message,
           currentState.conversationId,
           currentState.currentUserId,
-          currentState.conversationId,
+          currentState.secondUserID,
         );
       } else {
         await _repository.sendNewMultiMessage(
-          event.messageController, // Нужно передать контроллер или текст
+          event.message,
           currentState.conversationId,
           currentState.currentUserId,
           currentState.currentUsername,
         );
       }
 
-      // Обновляем сообщения
       final messages = event.isMultiConversation
           ? await _repository
               .fetchMultiConvMessages(currentState.conversationId)

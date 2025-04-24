@@ -4,12 +4,17 @@ import 'colors.dart';
 final theme = ThemeData(
   scaffoldBackgroundColor: AppColors.background,
   appBarTheme: AppBarTheme(
-    backgroundColor: AppColors.primary,
-    titleTextStyle: TextStyle(
-      color: AppColors.lightText,
-      fontSize: 20,
-    ),
-  ),
+      backgroundColor: AppColors.primary,
+      titleTextStyle: TextStyle(
+        color: AppColors.lightText,
+        fontSize: 20,
+      ),
+      elevation: 0,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(16),
+        ),
+      )),
   textTheme: TextTheme(
       labelLarge: TextStyle(
         color: AppColors.lightText,
