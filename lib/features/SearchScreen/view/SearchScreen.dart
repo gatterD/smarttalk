@@ -1,11 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart'; // Import Provider package
 import 'package:smarttalk/features/UsersMessageScreen/UsersMessage.dart';
-
-import '../../../theme/theme.dart';
+import 'package:smarttalk/features/SearchScreen/bloc/SearchBloc.dart';
+import 'package:smarttalk/provider/ThemeProvider.dart'; // Import ThemeProvider
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -13,179 +11,106 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  TextEditingController _controller = TextEditingController();
-  List<Map<String, dynamic>> _users = [];
-  Set<int> _friends = {}; // Список ID друзей
-  bool _isLoading = false;
-  String? _currentUserId;
-  List<dynamic> _black_list = [];
-  final String baseUrl = dotenv.get('BASEURL');
+  final TextEditingController _controller = TextEditingController();
+  late SearchBloc _searchBloc;
 
   @override
   void initState() {
     super.initState();
-    _loadCurrentUserId();
+    _searchBloc = BlocProvider.of<SearchBloc>(context);
+    _searchBloc.add(LoadingUserIDSearchEvent());
+    _searchBloc.add(LoadingBlackListSearchEvent());
+    _searchBloc.add(LoadingFriendsSearchEvent());
   }
 
-  /// Загружаем ID пользователя из SharedPreferences
-  Future<void> _loadCurrentUserId() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? userId = prefs.getString('id');
-
-    if (userId != null) {
-      setState(() {
-        _currentUserId = userId;
-      });
-      await _fetchBLUsers(userId);
-      await _fetchFriends(userId);
+  void _searchUsers(String query) {
+    if (query.isNotEmpty) {
+      _searchBloc.add(LoadingUsersSearchEvent(query));
     }
   }
 
-  /// Загружаем список друзей текущего пользователя
-  Future<void> _fetchFriends(String userID) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/users/$userID/friends'),
-      );
-
-      if (response.statusCode == 200) {
-        List<dynamic> friends = jsonDecode(response.body);
-        setState(() {
-          _friends = friends.map<int>((f) => f['id'] as int).toSet();
-          _friends.add(int.parse(_currentUserId!));
-        });
-      }
-    } catch (e) {
-      debugPrint("Ошибка загрузки списка друзей: $e");
-    }
-  }
-
-  /// Добавляем пользователя в друзья
-  Future<bool> _addFriend(int friendId) async {
-    if (_currentUserId == null) return false;
-
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/users/$_currentUserId/friends'),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"friendId": friendId}),
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          _friends.add(friendId);
-        });
-        return true;
-      }
-    } catch (e) {
-      debugPrint("Ошибка при добавлении друга: $e");
-      return false;
-    }
-    return false;
-  }
-
-  /// Поиск пользователей по запросу
-  Future<void> _searchUsers(String query) async {
-    if (query.isEmpty) {
-      setState(() {
-        _users = [];
-      });
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/user/search?query=$query'),
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          _users = List<Map<String, dynamic>>.from(jsonDecode(response.body));
-          for (var blUser in _black_list) {
-            _users.removeWhere((user) => user['id'] == blUser);
-          }
-        });
-      } else {
-        throw Exception('Ошибка при поиске пользователей');
-      }
-    } catch (e) {
-      debugPrint("Ошибка: $e");
-    }
-
-    setState(() {
-      _isLoading = false;
-    });
-  }
-
-  Future<void> _fetchBLUsers(String userID) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/black_list/$userID'),
-      );
-
-      debugPrint(response.body.toString());
-      if (response.statusCode == 200) {
-        _black_list = jsonDecode(response.body);
-      }
-    } catch (e) {
-      debugPrint("Ошибка загрузки черного списка: $e");
-    }
+  Future<bool> _addFriend(String friendId) async {
+    return true;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Container(
-          height: 40,
-          child: TextField(
-            controller: _controller,
-            decoration: InputDecoration(
-              hintText: "Поиск...",
-              hintStyle: TextStyle(color: const Color.fromARGB(179, 0, 0, 0)),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Container(
+              height: 40,
+              child: TextField(
+                controller: _controller,
+                decoration: InputDecoration(
+                  hintText: "Поиск...",
+                  hintStyle:
+                      themeProvider.currentTheme.textTheme.bodyMedium?.copyWith(
+                    color: const Color.fromARGB(179, 0, 0, 0),
+                  ),
+                ),
+                style: themeProvider.currentTheme.textTheme.bodyMedium,
+                onChanged: (value) => _searchUsers(value),
+              ),
             ),
-            onChanged: (value) => _searchUsers(value),
           ),
-        ),
-      ),
-      body: _currentUserId == null
-          ? Center(
-              child: Text("Ошибка: не удалось загрузить данные пользователя"))
-          : _isLoading
-              ? Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                  itemCount: _users.length,
-                  itemBuilder: (context, index) {
-                    final user = _users[index];
-                    final isFriend = _friends.contains(user['id']);
+          body: BlocBuilder<SearchBloc, SearchState>(
+            builder: (context, state) {
+              if (state is ErrorSearchState) {
+                return Center(
+                  child: Text(
+                    "Ошибка: ${state.error}",
+                    style: themeProvider.currentTheme.textTheme.labelMedium,
+                  ),
+                );
+              }
 
+              if (state is LoadingSearchState) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (state is LoadedInitialSearchState) {
+                return Center(
+                  child: Text(
+                    "Enter search request",
+                    style: themeProvider.currentTheme.textTheme.labelLarge,
+                  ),
+                );
+              }
+
+              if (state is LoadedSearchState) {
+                return ListView.builder(
+                  itemCount: state.users.length,
+                  itemBuilder: (context, index) {
+                    final user = state.users[index];
+                    bool isFriend = false;
+                    if (state.friends.contains(user['id']) ||
+                        user['id'] == state.userID) {
+                      isFriend = true;
+                    }
                     return ListTile(
                       leading: CircleAvatar(child: Text(user['username'][0])),
                       title: Text(
                         user['username'],
-                        style: theme.textTheme.labelMedium,
+                        style: themeProvider.currentTheme.textTheme.labelMedium,
                       ),
                       subtitle: Text(
                         "ID: ${user['id']}",
-                        style: theme.textTheme.labelSmall,
+                        style: themeProvider.currentTheme.textTheme.labelSmall,
                       ),
                       trailing: isFriend
-                          ? Icon(Icons.check,
-                              color:
-                                  Colors.green) // Галочка, если уже в друзьях
+                          ? Icon(Icons.check, color: Colors.green)
                           : IconButton(
                               icon: Icon(Icons.person_add, color: Colors.blue),
                               onPressed: () async {
-                                bool success = await _addFriend(user['id']);
+                                bool success =
+                                    await _addFriend(user['id'].toString());
                                 if (success) {
-                                  setState(() {
-                                    _friends.add(user[
-                                        'id']); // Добавляем пользователя в друзья
-                                  });
+                                  _searchBloc
+                                      .add(AddToFriendSearchEvent(user['id']));
+                                  _searchBloc.add(LoadingFriendsSearchEvent());
+
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                         content: Text(
@@ -209,7 +134,25 @@ class _SearchScreenState extends State<SearchScreen> {
                       },
                     );
                   },
+                );
+              }
+
+              return Center(
+                child: Text(
+                  "Enter search request",
+                  style: themeProvider.currentTheme.textTheme.labelLarge,
                 ),
+              );
+            },
+          ),
+        );
+      },
     );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 }

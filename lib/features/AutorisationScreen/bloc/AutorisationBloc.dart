@@ -8,7 +8,6 @@ class AutorisationBloc extends Bloc<AutorisationEvent, AutorisationState> {
   final AuthService _authService = AuthService();
 
   AutorisationBloc() : super(AutorisationInitial()) {
-    // Регистрируем обработчик для LoginEvent
     on<LoginEvent>((event, emit) async {
       emit(AutorisationLoading()); // Состояние загрузки
       try {

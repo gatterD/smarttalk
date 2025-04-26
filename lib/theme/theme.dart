@@ -1,55 +1,86 @@
 import 'package:flutter/material.dart';
+import 'colors.dart';
 
-final theme = ThemeData(
-  scaffoldBackgroundColor: Color.fromRGBO(19, 41, 61, 1),
-  appBarTheme: AppBarTheme(
-      backgroundColor: Color.fromRGBO(0, 100, 148, 1),
-      titleTextStyle: TextStyle(
-        color: Color.fromRGBO(232, 241, 242, 1),
-        fontSize: 20,
-      )),
-  buttonTheme: ButtonThemeData(),
-  textTheme: TextTheme(
-      labelLarge: TextStyle(
-          color: Color.fromRGBO(232, 241, 242, 1),
-          fontSize: 16,
-          fontWeight: FontWeight.bold),
-      labelMedium:
-          TextStyle(color: Color.fromRGBO(232, 241, 242, 1), fontSize: 14),
-      labelSmall: TextStyle(
-        color: Color.fromRGBO(232, 241, 242, 0.6),
-        fontSize: 10,
-      )),
-  iconButtonTheme: IconButtonThemeData(
-    style: ButtonStyle(
-      foregroundColor: MaterialStateProperty.resolveWith<Color>(
-        (Set<MaterialState> states) {
-          if (states.contains(MaterialState.pressed)) {
-            return Color.fromRGBO(36, 123, 160, 1); // Цвет иконки при нажатии
-          }
-          return Color.fromRGBO(232, 241, 242, 1); // Цвет иконки по умолчанию
-        },
-      ),
-    ),
-  ),
-  inputDecorationTheme: InputDecorationTheme(
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10.0),
-      borderSide: BorderSide(color: Colors.blue),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10.0),
-      borderSide:
-          BorderSide(color: const Color.fromRGBO(0, 100, 148, 1), width: 2.0),
-    ),
-    errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10.0),
-      borderSide: BorderSide(color: Colors.red),
-    ),
-    filled: true,
-    fillColor: Colors.grey[200],
-    labelStyle: TextStyle(color: Colors.blue),
-    hintStyle: TextStyle(color: Colors.grey),
-    errorStyle: TextStyle(color: Colors.red),
-  ),
-);
+class AppThemes {
+  static ThemeData darkTheme(AppColors colors) => ThemeData(
+        scaffoldBackgroundColor: colors.background,
+        appBarTheme: AppBarTheme(
+          backgroundColor: colors.primary,
+          titleTextStyle: TextStyle(
+            color: colors.lightText,
+            fontSize: 20,
+          ),
+          elevation: 0,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+          ),
+        ),
+        textTheme: TextTheme(
+          headlineLarge: TextStyle(
+            color: colors.lightText,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+          labelLarge: TextStyle(
+            color: colors.lightText,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+          labelMedium: TextStyle(
+            color: colors.lightText,
+            fontSize: 14,
+          ),
+          labelSmall: TextStyle(
+            color: colors.lightTextFaded,
+            fontSize: 10,
+          ),
+          titleMedium: TextStyle(
+            color: colors.backgroundLight,
+            fontSize: 14,
+          ),
+        ),
+        iconButtonTheme: IconButtonThemeData(
+          style: ButtonStyle(
+            foregroundColor: MaterialStateProperty.all(colors.lightText),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: colors.lightBackGround,
+          hintStyle: TextStyle(color: colors.darkTextColor),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: colors.lightTextFaded),
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: colors.accent, width: 2),
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: colors.red),
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: colors.red, width: 2),
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
+          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: colors.accent,
+            foregroundColor: colors.lightText,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            textStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
+            elevation: 4,
+          ),
+        ),
+      );
+}

@@ -1,98 +1,155 @@
 import 'package:flutter/material.dart';
-import 'package:smarttalk/functions/PasswordValidate.dart';
-import 'package:smarttalk/functions/UserNameValidation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart'; // Import Provider package
+import 'package:smarttalk/services/PasswordValidate.dart';
+import 'package:smarttalk/services/UserNameValidation.dart';
 import 'package:smarttalk/models/AutorisationHelper.dart';
-import 'package:smarttalk/models/User.dart';
+import 'package:smarttalk/features/RegisterScreen/bloc/RegisterBloc.dart';
+import 'package:smarttalk/provider/ThemeProvider.dart'; // Import ThemeProvider
 
-class RegisterScreen extends StatefulWidget {
-  @override
-  _RegisterScreenState createState() => _RegisterScreenState();
-}
-
-class _RegisterScreenState extends State<RegisterScreen> {
+class RegisterScreen extends StatelessWidget {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _passwordSecondController = TextEditingController();
-  final AuthService _authService = AuthService();
 
-  void _register() async {
-    if (_formKey.currentState!.validate()) {
-      final user = User(
-        username: _usernameController.text,
-        password: _passwordController.text,
-      );
-      debugPrint(_usernameController.text);
-      final success = await _authService.register(user);
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration successful')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration failed')),
-        );
-      }
-    }
-  }
+  RegisterScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Register')),
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 50),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextFormField(
-                controller: _usernameController,
-                decoration: InputDecoration(
-                  hintText: 'Enter username',
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return Scaffold(
+          appBar: AppBar(
+            centerTitle: true,
+            title: const Text('Register'),
+            titleTextStyle: themeProvider.currentTheme.textTheme.headlineLarge,
+          ),
+          body: BlocProvider(
+            create: (context) => RegisterBloc(
+              authService: AuthService(),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 50),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 32.0),
+                      child: Image.asset(
+                        'assets/images/smarttalk_logo.png',
+                        width: MediaQuery.of(context).size.width * 0.5,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    _buildUsernameField(themeProvider),
+                    const SizedBox(height: 20),
+                    _buildPasswordField(themeProvider),
+                    const SizedBox(height: 20),
+                    _buildPasswordConfirmationField(themeProvider),
+                    const SizedBox(height: 20),
+                    _buildRegisterButton(context, themeProvider),
+                    _buildBlocListener(),
+                  ],
                 ),
-                validator: validateUsername,
               ),
-              Padding(
-                padding: EdgeInsets.only(top: 20),
-                child: TextFormField(
-                  controller: _passwordController,
-                  decoration: InputDecoration(
-                    hintText: 'Enter password',
-                  ),
-                  obscureText: true,
-                  validator: validatePassword,
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
-                child: TextFormField(
-                  controller: _passwordSecondController,
-                  decoration: InputDecoration(
-                    hintText: 'Enter password again',
-                  ),
-                  validator: validatePassword,
-                  obscureText: true,
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (comparePasswords(_passwordController.text,
-                      _passwordSecondController.text)) {
-                    _register();
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Passwords must be the same!')),
-                    );
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildUsernameField(ThemeProvider themeProvider) {
+    return TextFormField(
+      controller: _usernameController,
+      decoration: InputDecoration(
+        hintText: 'Enter username',
+        hintStyle: themeProvider.currentTheme.textTheme.bodyMedium,
+      ),
+      style: themeProvider.currentTheme.textTheme.bodyMedium,
+      validator: validateUsername,
+    );
+  }
+
+  Widget _buildPasswordField(ThemeProvider themeProvider) {
+    return TextFormField(
+      controller: _passwordController,
+      decoration: InputDecoration(
+        hintText: 'Enter password',
+        hintStyle: themeProvider.currentTheme.textTheme.bodyMedium,
+      ),
+      style: themeProvider.currentTheme.textTheme.bodyMedium,
+      obscureText: true,
+      validator: validatePassword,
+    );
+  }
+
+  Widget _buildPasswordConfirmationField(ThemeProvider themeProvider) {
+    return TextFormField(
+      controller: _passwordSecondController,
+      decoration: InputDecoration(
+        hintText: 'Enter password again',
+        hintStyle: themeProvider.currentTheme.textTheme.bodyMedium,
+      ),
+      style: themeProvider.currentTheme.textTheme.bodyMedium,
+      validator: validatePassword,
+      obscureText: true,
+    );
+  }
+
+  Widget _buildRegisterButton(
+      BuildContext context, ThemeProvider themeProvider) {
+    return BlocBuilder<RegisterBloc, RegisterState>(
+      builder: (context, state) {
+        return ElevatedButton(
+          onPressed: state is RegisterLoading
+              ? null
+              : () {
+                  if (_formKey.currentState!.validate()) {
+                    if (comparePasswords(_passwordController.text,
+                        _passwordSecondController.text)) {
+                      context.read<RegisterBloc>().add(
+                            RegisterSubmitted(
+                              username: _usernameController.text,
+                              password: _passwordController.text,
+                            ),
+                          );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Passwords must be the same!')),
+                      );
+                    }
                   }
                 },
-                child: Text('Register'),
-              ),
-            ],
+          style: ElevatedButton.styleFrom(
+            textStyle: themeProvider.currentTheme.textTheme.labelLarge,
           ),
-        ),
-      ),
+          child: state is RegisterLoading
+              ? const CircularProgressIndicator()
+              : const Text('Register'),
+        );
+      },
+    );
+  }
+
+  Widget _buildBlocListener() {
+    return BlocListener<RegisterBloc, RegisterState>(
+      listener: (context, state) {
+        if (state is RegisterSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Registration successful')),
+          );
+        } else if (state is RegisterFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.error)),
+          );
+        }
+      },
+      child: const SizedBox.shrink(),
     );
   }
 }
