@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:smarttalk/repository/UsersMessageRepository.dart';
-import 'package:smarttalk/theme/theme.dart';
 import 'package:smarttalk/features/UsersMessageScreen/bloc/UsersMessageBloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart'; // Import Provider package
+import 'package:smarttalk/provider/ThemeProvider.dart'; // Import ThemeProvider
 
 class UsersMessageScreen extends StatelessWidget {
   final String usersName;
@@ -25,10 +26,15 @@ class UsersMessageScreen extends StatelessWidget {
           convID: convID,
           secondUserName: usersName,
         )),
-      child: _UsersMessageView(
-        usersName: usersName,
-        isMultiConversation: isMultiConversation,
-        convID: convID,
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return _UsersMessageView(
+            usersName: usersName,
+            isMultiConversation: isMultiConversation,
+            convID: convID,
+            themeProvider: themeProvider,
+          );
+        },
       ),
     );
   }
@@ -38,6 +44,7 @@ class _UsersMessageView extends StatelessWidget {
   final String usersName;
   final bool isMultiConversation;
   final int convID;
+  final ThemeProvider themeProvider;
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -45,6 +52,7 @@ class _UsersMessageView extends StatelessWidget {
     required this.usersName,
     required this.isMultiConversation,
     required this.convID,
+    required this.themeProvider,
   });
 
   void _scrollToBottom() {
@@ -62,7 +70,11 @@ class _UsersMessageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(centerTitle: true, title: Text(usersName)),
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text(usersName,
+            style: themeProvider.currentTheme.textTheme.headlineLarge),
+      ),
       body: BlocConsumer<UsersMessageBloc, UsersMessageState>(
         listener: (context, state) {
           if (state is MessageSent) {
@@ -73,7 +85,12 @@ class _UsersMessageView extends StatelessWidget {
           if (state is UsersMessageLoading) {
             return const Center(child: CircularProgressIndicator());
           } else if (state is UsersMessageError) {
-            return Center(child: Text('Error: ${state.message}'));
+            return Center(
+              child: Text(
+                'Error: ${state.message}',
+                style: themeProvider.currentTheme.textTheme.labelMedium,
+              ),
+            );
           } else if (state is UsersMessageLoaded) {
             _scrollToBottom();
             return Column(
@@ -103,7 +120,8 @@ class _UsersMessageView extends StatelessWidget {
                                     : isMultiConversation
                                         ? message['sender_name']
                                         : usersName,
-                                style: theme.textTheme.labelSmall,
+                                style: themeProvider
+                                    .currentTheme.textTheme.labelSmall,
                               ),
                             ),
                             ConstrainedBox(
@@ -122,9 +140,13 @@ class _UsersMessageView extends StatelessWidget {
                                       : Colors.grey[300],
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Text(message['content']),
+                                child: Text(
+                                  message['content'],
+                                  style: themeProvider
+                                      .currentTheme.textTheme.bodyMedium,
+                                ),
                               ),
-                            )
+                            ),
                           ],
                         ),
                       );
@@ -153,10 +175,12 @@ class _UsersMessageView extends StatelessWidget {
                             color: Colors.red,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Text(
                               'Данный пользователь добавил вас в Черный список',
-                              style: TextStyle(
+                              style: themeProvider
+                                  .currentTheme.textTheme.bodyMedium
+                                  ?.copyWith(
                                 color: Colors.white,
                                 fontSize: 16,
                               ),
@@ -170,6 +194,8 @@ class _UsersMessageView extends StatelessWidget {
                                 controller: _messageController,
                                 decoration: InputDecoration(
                                   hintText: 'Напишите сообщение...',
+                                  hintStyle: themeProvider
+                                      .currentTheme.textTheme.bodyMedium,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(24),
                                     borderSide: BorderSide.none,
@@ -178,6 +204,8 @@ class _UsersMessageView extends StatelessWidget {
                                   contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 8),
                                 ),
+                                style: themeProvider
+                                    .currentTheme.textTheme.bodyMedium,
                               ),
                             ),
                             const SizedBox(width: 8),

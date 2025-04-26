@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart'; // Import Provider package
 import 'package:smarttalk/services/PasswordValidate.dart';
 import 'package:smarttalk/services/UserNameValidation.dart';
 import 'package:smarttalk/models/AutorisationHelper.dart';
 import 'package:smarttalk/features/RegisterScreen/bloc/RegisterBloc.dart';
+import 'package:smarttalk/provider/ThemeProvider.dart'; // Import ThemeProvider
 
 class RegisterScreen extends StatelessWidget {
   final _formKey = GlobalKey<FormState>();
@@ -15,76 +17,91 @@ class RegisterScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
-      body: BlocProvider(
-        create: (context) => RegisterBloc(
-          authService: AuthService(),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 50),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 32.0),
-                  child: Image.asset(
-                    'assets/images/smarttalk_logo.png',
-                    width: MediaQuery.of(context).size.width * 0.5,
-                    fit: BoxFit.contain,
-                  ),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return Scaffold(
+          appBar: AppBar(
+            centerTitle: true,
+            title: const Text('Register'),
+            titleTextStyle: themeProvider.currentTheme.textTheme.headlineLarge,
+          ),
+          body: BlocProvider(
+            create: (context) => RegisterBloc(
+              authService: AuthService(),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 50),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 32.0),
+                      child: Image.asset(
+                        'assets/images/smarttalk_logo.png',
+                        width: MediaQuery.of(context).size.width * 0.5,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    _buildUsernameField(themeProvider),
+                    const SizedBox(height: 20),
+                    _buildPasswordField(themeProvider),
+                    const SizedBox(height: 20),
+                    _buildPasswordConfirmationField(themeProvider),
+                    const SizedBox(height: 20),
+                    _buildRegisterButton(context, themeProvider),
+                    _buildBlocListener(),
+                  ],
                 ),
-                _buildUsernameField(),
-                const SizedBox(height: 20),
-                _buildPasswordField(),
-                const SizedBox(height: 20),
-                _buildPasswordConfirmationField(),
-                const SizedBox(height: 20),
-                _buildRegisterButton(context),
-                _buildBlocListener(),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildUsernameField() {
+  Widget _buildUsernameField(ThemeProvider themeProvider) {
     return TextFormField(
       controller: _usernameController,
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         hintText: 'Enter username',
+        hintStyle: themeProvider.currentTheme.textTheme.bodyMedium,
       ),
+      style: themeProvider.currentTheme.textTheme.bodyMedium,
       validator: validateUsername,
     );
   }
 
-  Widget _buildPasswordField() {
+  Widget _buildPasswordField(ThemeProvider themeProvider) {
     return TextFormField(
       controller: _passwordController,
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         hintText: 'Enter password',
+        hintStyle: themeProvider.currentTheme.textTheme.bodyMedium,
       ),
+      style: themeProvider.currentTheme.textTheme.bodyMedium,
       obscureText: true,
       validator: validatePassword,
     );
   }
 
-  Widget _buildPasswordConfirmationField() {
+  Widget _buildPasswordConfirmationField(ThemeProvider themeProvider) {
     return TextFormField(
       controller: _passwordSecondController,
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         hintText: 'Enter password again',
+        hintStyle: themeProvider.currentTheme.textTheme.bodyMedium,
       ),
+      style: themeProvider.currentTheme.textTheme.bodyMedium,
       validator: validatePassword,
       obscureText: true,
     );
   }
 
-  Widget _buildRegisterButton(BuildContext context) {
+  Widget _buildRegisterButton(
+      BuildContext context, ThemeProvider themeProvider) {
     return BlocBuilder<RegisterBloc, RegisterState>(
       builder: (context, state) {
         return ElevatedButton(
@@ -108,6 +125,9 @@ class RegisterScreen extends StatelessWidget {
                     }
                   }
                 },
+          style: ElevatedButton.styleFrom(
+            textStyle: themeProvider.currentTheme.textTheme.labelLarge,
+          ),
           child: state is RegisterLoading
               ? const CircularProgressIndicator()
               : const Text('Register'),

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:provider/provider.dart'; // Import Provider package
 import 'package:smarttalk/features/UsersMessageScreen/UsersMessage.dart';
-import 'package:smarttalk/theme/theme.dart';
 import '../../AutorisationScreen/Autorisation.dart';
 import 'package:smarttalk/features/FriendsListScreen/bloc/FriendsListBloc.dart';
 import 'package:smarttalk/repository/FriendsListRepository.dart';
-import 'package:smarttalk/theme/colors.dart';
+import 'package:smarttalk/provider/ThemeProvider.dart'; // Import ThemeProvider
 
 class FriendsListScreen extends StatelessWidget {
   const FriendsListScreen({super.key});
@@ -16,50 +16,59 @@ class FriendsListScreen extends StatelessWidget {
     return BlocProvider(
       create: (context) =>
           FriendsBloc(FriendsRepository())..add(LoadFriendsEvent()),
-      child: Scaffold(
-        drawer: const FriendsDrawer(),
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          title: const Text('SmartTalk'),
-          centerTitle: true,
-          leading: Builder(
-            builder: (context) => IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: () => Scaffold.of(context).openDrawer(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return Scaffold(
+            drawer: const FriendsDrawer(),
+            appBar: AppBar(
+              automaticallyImplyLeading: false,
+              title: Text(
+                'SmartTalk',
+                style: themeProvider.currentTheme.textTheme.headlineLarge,
+              ),
+              centerTitle: true,
+              leading: Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
+              actions: [
+                IconButton(
+                  onPressed: () => Navigator.pushNamed(context, '/search'),
+                  icon: const Icon(Icons.search),
+                  tooltip: 'Search',
+                )
+              ],
             ),
-          ),
-          actions: [
-            IconButton(
-              onPressed: () => Navigator.pushNamed(context, '/search'),
-              icon: const Icon(Icons.search),
-              tooltip: 'Search',
-            )
-          ],
-        ),
-        body: BlocBuilder<FriendsBloc, FriendsState>(
-          builder: (context, state) {
-            if (state is FriendsLoadingState) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(AppColors.drawerDivider),
-                ),
-              );
-            } else if (state is FriendsErrorState) {
-              return Center(
-                child: Text(
-                  state.error,
-                  style: theme.textTheme.labelMedium
-                      ?.copyWith(color: Colors.red[200]),
-                ),
-              );
-            } else if (state is FriendsLoadedState) {
-              return FriendsListView(state: state);
-            }
-            return Container();
-          },
-        ),
+            body: BlocBuilder<FriendsBloc, FriendsState>(
+              builder: (context, state) {
+                if (state is FriendsLoadingState) {
+                  return Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          themeProvider.currentColorTheme.drawerDivider),
+                    ),
+                  );
+                } else if (state is FriendsErrorState) {
+                  return Center(
+                    child: Text(
+                      state.error,
+                      style: themeProvider.currentTheme.textTheme.labelMedium
+                          ?.copyWith(
+                              color: themeProvider.currentColorTheme.red),
+                    ),
+                  );
+                } else if (state is FriendsLoadedState) {
+                  return FriendsListView(
+                      state: state, themeProvider: themeProvider);
+                }
+                return Container();
+              },
+            ),
+          );
+        },
       ),
     );
   }
@@ -70,102 +79,113 @@ class FriendsDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<FriendsBloc, FriendsState>(
-      builder: (context, state) {
-        String username = '';
-        if (state is FriendsLoadedState) {
-          username = state.currentUsername;
-        }
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return BlocBuilder<FriendsBloc, FriendsState>(
+          builder: (context, state) {
+            String username = '';
+            if (state is FriendsLoadedState) {
+              username = state.currentUsername;
+            }
 
-        return Drawer(
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.horizontal(right: Radius.circular(16)),
-          ),
-          child: Column(
-            children: [
-              UserAccountsDrawerHeader(
-                accountName: Text(
-                  username.isNotEmpty ? username : 'Загрузка...',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontSize: 20,
-                    color: Colors.white,
-                  ),
-                ),
-                accountEmail: null,
-                currentAccountPicture: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.lightText,
-                        AppColors.accent,
-                      ],
+            return Drawer(
+              backgroundColor: themeProvider.currentColorTheme.white,
+              shape: const RoundedRectangleBorder(
+                borderRadius:
+                    BorderRadius.horizontal(right: Radius.circular(16)),
+              ),
+              child: Column(
+                children: [
+                  UserAccountsDrawerHeader(
+                    accountName: Text(
+                      username.isNotEmpty ? username : 'Загрузка...',
+                      style: themeProvider.currentTheme.textTheme.labelMedium
+                          ?.copyWith(
+                        fontSize: 20,
+                        color: themeProvider.currentColorTheme.white,
+                      ),
                     ),
-                  ),
-                  child: CircleAvatar(
-                    backgroundColor: AppColors.lightText,
-                    child: Text(
-                      username.isNotEmpty ? username[0].toUpperCase() : '?',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                    accountEmail: null,
+                    currentAccountPicture: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            themeProvider.currentColorTheme.lightText,
+                            themeProvider.currentColorTheme.accent,
+                          ],
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        backgroundColor:
+                            themeProvider.currentColorTheme.mediumbackground,
+                        child: Text(
+                          username.isNotEmpty ? username[0].toUpperCase() : '?',
+                          style: themeProvider
+                              .currentTheme.textTheme.headlineLarge,
+                        ),
+                      ),
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          themeProvider.currentColorTheme.primary,
+                          themeProvider.currentColorTheme.background,
+                        ],
                       ),
                     ),
                   ),
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.primary,
-                      AppColors.background,
-                    ],
+                  Expanded(
+                    child: ListView(
+                      padding: EdgeInsets.zero,
+                      children: [
+                        _buildDrawerItem(
+                          icon: Icons.settings,
+                          text: 'Настройки',
+                          onTap: () {},
+                          themeProvider: themeProvider,
+                        ),
+                        _buildDrawerItem(
+                          icon: Icons.forum_outlined,
+                          text: 'Создание беседы',
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/chat-creation'),
+                          themeProvider: themeProvider,
+                        ),
+                        _buildDrawerItem(
+                          icon: Icons.no_accounts_sharp,
+                          text: 'Черный список',
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/black_list'),
+                          themeProvider: themeProvider,
+                        ),
+                        Divider(
+                          color: themeProvider.currentColorTheme.drawerDivider,
+                          indent: 16,
+                          endIndent: 16,
+                        ),
+                        _buildDrawerItem(
+                          icon: Icons.exit_to_app,
+                          text: 'Выйти',
+                          onTap: () {
+                            context.read<FriendsBloc>().add(LogoutEvent());
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => AutorisationScreen()),
+                            );
+                          },
+                          themeProvider: themeProvider,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
-              Expanded(
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    _buildDrawerItem(
-                      icon: Icons.settings,
-                      text: 'Настройки',
-                      onTap: () {},
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons.forum_outlined,
-                      text: 'Создание беседы',
-                      onTap: () =>
-                          Navigator.pushNamed(context, '/chat-creation'),
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons.no_accounts_sharp,
-                      text: 'Черный список',
-                      onTap: () => Navigator.pushNamed(context, '/black_list'),
-                    ),
-                    const Divider(
-                      color: AppColors.drawerDivider,
-                      indent: 16,
-                      endIndent: 16,
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons.exit_to_app,
-                      text: 'Выйти',
-                      onTap: () {
-                        context.read<FriendsBloc>().add(LogoutEvent());
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => AutorisationScreen()),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -175,15 +195,16 @@ class FriendsDrawer extends StatelessWidget {
     required IconData icon,
     required String text,
     required VoidCallback onTap,
+    required ThemeProvider themeProvider,
   }) {
     return ListTile(
       leading: Icon(
         icon,
-        color: AppColors.backgroundLight,
+        color: themeProvider.currentColorTheme.backgroundLight,
       ),
       title: Text(
         text,
-        style: theme.textTheme.titleMedium,
+        style: themeProvider.currentTheme.textTheme.titleMedium,
       ),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -194,8 +215,10 @@ class FriendsDrawer extends StatelessWidget {
 
 class FriendsListView extends StatelessWidget {
   final FriendsLoadedState state;
+  final ThemeProvider themeProvider;
 
-  const FriendsListView({super.key, required this.state});
+  const FriendsListView(
+      {super.key, required this.state, required this.themeProvider});
 
   bool isMultiUser(String username) {
     return state.multiConversations.any((conv) => conv['username'] == username);
@@ -204,15 +227,14 @@ class FriendsListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
-      backgroundColor: AppColors.background,
-      color: AppColors.lightText,
       onRefresh: () async =>
           context.read<FriendsBloc>().add(LoadFriendsEvent()),
       child: state.sortedFriends.isEmpty
           ? Center(
               child: Text(
                 'You have no contacts :(',
-                style: theme.textTheme.labelMedium?.copyWith(
+                style:
+                    themeProvider.currentTheme.textTheme.labelMedium?.copyWith(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -239,10 +261,9 @@ class FriendsListView extends StatelessWidget {
                                       friend['id'].toString()),
                                 );
                           },
-                          backgroundColor: Colors.red[400]!,
-                          foregroundColor: Colors.white,
+                          backgroundColor: themeProvider.currentColorTheme.red,
                           icon: Icons.delete,
-                          label: 'Удалить',
+                          label: 'Добавить в ЧС',
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ],
@@ -251,8 +272,8 @@ class FriendsListView extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            AppColors.background,
-                            AppColors.backgroundLight,
+                            themeProvider.currentColorTheme.background,
+                            themeProvider.currentColorTheme.backgroundLight,
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -260,7 +281,7 @@ class FriendsListView extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: themeProvider.currentColorTheme.black,
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -278,8 +299,8 @@ class FriendsListView extends StatelessWidget {
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
                               colors: [
-                                AppColors.primary,
-                                AppColors.accent,
+                                themeProvider.currentColorTheme.primary,
+                                themeProvider.currentColorTheme.accent,
                               ],
                             ),
                           ),
@@ -299,20 +320,24 @@ class FriendsListView extends StatelessWidget {
                           friend['username'] == state.currentUsername
                               ? 'Favorite'
                               : friend['username'],
-                          style: theme.textTheme.labelMedium?.copyWith(
+                          style: themeProvider
+                              .currentTheme.textTheme.labelMedium
+                              ?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         subtitle: Text(
                           'ID: ${friend['id']}',
-                          style: theme.textTheme.labelSmall?.copyWith(
+                          style: themeProvider.currentTheme.textTheme.labelSmall
+                              ?.copyWith(
                             fontSize: 12,
                           ),
                         ),
                         trailing: isPinned
-                            ? const Icon(
+                            ? Icon(
                                 Icons.push_pin,
-                                color: Color.fromRGBO(36, 123, 160, 1),
+                                color: themeProvider
+                                    .currentColorTheme.mediumbackground,
                               )
                             : state.sortedFriends
                                     .any((f) => f['id'] == friend['id'])
@@ -323,14 +348,15 @@ class FriendsListView extends StatelessWidget {
                                                 friend['id'].toString()),
                                           );
                                     },
-                                    icon: const Icon(
+                                    icon: Icon(
                                       Icons.push_pin_outlined,
-                                      color: AppColors.drawerDivider,
+                                      color:
+                                          themeProvider.currentColorTheme.gray,
                                     ),
                                   )
-                                : const Icon(
+                                : Icon(
                                     Icons.no_accounts,
-                                    color: AppColors.drawerDivider,
+                                    color: themeProvider.currentColorTheme.gray,
                                   ),
                         onTap: () {
                           Navigator.push(

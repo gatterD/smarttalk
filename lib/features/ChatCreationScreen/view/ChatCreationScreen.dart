@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:smarttalk/theme/theme.dart';
+import 'package:provider/provider.dart'; // Import Provider package
 import 'package:smarttalk/features/ChatCreationScreen/bloc/ChatCreationBloc.dart';
 import 'package:smarttalk/repository/ChatCreationRepository.dart';
+import 'package:smarttalk/provider/ThemeProvider.dart'; // Import ThemeProvider
 
 class ChatCreationScreen extends StatelessWidget {
   ChatCreationScreen({super.key});
@@ -15,37 +16,47 @@ class ChatCreationScreen extends StatelessWidget {
       create: (context) => ChatCreationBloc(
         repository: ChatCreationRepository(),
       )..add(LoadCurrentUserEvent()),
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Создание чата'),
-        ),
-        body: BlocConsumer<ChatCreationBloc, ChatCreationState>(
-          listener: (context, state) {
-            if (state is ChatCreationError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message)),
-              );
-            } else if (state is ChatCreatedSuccess) {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, "/friend_list");
-            }
-          },
-          builder: (context, state) {
-            if (state is ChatCreationLoading || state is ChatCreationInitial) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (state is ChatCreationError) {
-              return Center(child: Text(state.message));
-            } else if (state is ChatCreationLoaded) {
-              return _buildLoadedState(context, state);
-            }
-            return Container();
-          },
-        ),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return Scaffold(
+            appBar: AppBar(
+              centerTitle: true,
+              title: Text(
+                'Создание чата',
+                style: themeProvider.currentTheme.textTheme.headlineLarge,
+              ),
+            ),
+            body: BlocConsumer<ChatCreationBloc, ChatCreationState>(
+              listener: (context, state) {
+                if (state is ChatCreationError) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(state.message)),
+                  );
+                } else if (state is ChatCreatedSuccess) {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, "/friend_list");
+                }
+              },
+              builder: (context, state) {
+                if (state is ChatCreationLoading ||
+                    state is ChatCreationInitial) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (state is ChatCreationError) {
+                  return Center(child: Text(state.message));
+                } else if (state is ChatCreationLoaded) {
+                  return _buildLoadedState(context, state, themeProvider);
+                }
+                return Container();
+              },
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildLoadedState(BuildContext context, ChatCreationLoaded state) {
+  Widget _buildLoadedState(BuildContext context, ChatCreationLoaded state,
+      ThemeProvider themeProvider) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -53,12 +64,15 @@ class ChatCreationScreen extends StatelessWidget {
         children: [
           TextField(
             controller: _chatNameController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: 'Название чата',
+              hintStyle: themeProvider.currentTheme.textTheme.bodyMedium,
             ),
+            style: themeProvider.currentTheme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 20),
-          Text('Добавленные участники:', style: theme.textTheme.labelLarge),
+          Text('Добавленные участники:',
+              style: themeProvider.currentTheme.textTheme.labelLarge),
           const SizedBox(height: 8),
           Container(
             height: 100,
@@ -72,7 +86,7 @@ class ChatCreationScreen extends StatelessWidget {
                 ? Center(
                     child: Text(
                       'Пока никого нет',
-                      style: theme.textTheme.labelSmall,
+                      style: themeProvider.currentTheme.textTheme.labelSmall,
                     ),
                   )
                 : Wrap(
@@ -93,7 +107,8 @@ class ChatCreationScreen extends StatelessWidget {
                           children: [
                             Text(
                               user['username'],
-                              style: theme.textTheme.labelMedium,
+                              style: themeProvider
+                                  .currentTheme.textTheme.labelMedium,
                             ),
                             const SizedBox(width: 4),
                             GestureDetector(
@@ -112,7 +127,8 @@ class ChatCreationScreen extends StatelessWidget {
                   ),
           ),
           const SizedBox(height: 20),
-          Text('Доступные пользователи:', style: theme.textTheme.labelLarge),
+          Text('Доступные пользователи:',
+              style: themeProvider.currentTheme.textTheme.labelLarge),
           const SizedBox(height: 8),
           Expanded(
             child: Container(
@@ -136,7 +152,7 @@ class ChatCreationScreen extends StatelessWidget {
                     child: ListTile(
                       title: Text(
                         user['username'],
-                        style: theme.textTheme.labelMedium,
+                        style: themeProvider.currentTheme.textTheme.labelMedium,
                       ),
                       trailing: IconButton(
                         icon: const Icon(Icons.person_add, color: Colors.green),

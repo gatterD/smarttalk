@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smarttalk/repository/UsersMessageRepository.dart';
-import '';
 
 part 'UsersMessageEvent.dart';
 part 'UsersMessageState.dart';
