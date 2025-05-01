@@ -1,15 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:provider/provider.dart'; // Import Provider package
+import 'package:provider/provider.dart';
 import 'package:smarttalk/features/UsersMessageScreen/UsersMessage.dart';
 import '../../AutorisationScreen/Autorisation.dart';
 import 'package:smarttalk/features/FriendsListScreen/bloc/FriendsListBloc.dart';
 import 'package:smarttalk/repository/FriendsListRepository.dart';
-import 'package:smarttalk/provider/ThemeProvider.dart'; // Import ThemeProvider
+import 'package:smarttalk/provider/ThemeProvider.dart';
+import 'package:smarttalk/services/VoiseAssistant.dart'; // Убедитесь, что путь правильный
 
-class FriendsListScreen extends StatelessWidget {
-  const FriendsListScreen({super.key});
+class FriendsListScreen extends StatefulWidget {
+  FriendsListScreen({super.key});
+
+  @override
+  State<FriendsListScreen> createState() => _FriendsListScreenState();
+}
+
+class _FriendsListScreenState extends State<FriendsListScreen> {
+  final VoiceAssistant _voiceAssistant = VoiceAssistant();
+  String _recognizedText = ''; // Добавим переменную
+
+  void _handleRecognizedText(String text) {
+    setState(() {
+      _recognizedText = text;
+    });
+  }
+
+  @override
+  void dispose() {
+    _voiceAssistant.stopListening();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,32 +62,83 @@ class FriendsListScreen extends StatelessWidget {
                 )
               ],
             ),
-            body: BlocBuilder<FriendsBloc, FriendsState>(
-              builder: (context, state) {
-                if (state is FriendsLoadingState) {
-                  return Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                          themeProvider.currentColorTheme.drawerDivider),
+            body: Stack(
+              children: [
+                BlocBuilder<FriendsBloc, FriendsState>(
+                  builder: (context, state) {
+                    if (state is FriendsLoadingState) {
+                      return Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                              themeProvider.currentColorTheme.drawerDivider),
+                        ),
+                      );
+                    } else if (state is FriendsErrorState) {
+                      return Center(
+                        child: Text(
+                          state.error,
+                          style: themeProvider
+                              .currentTheme.textTheme.labelMedium
+                              ?.copyWith(
+                                  color: themeProvider.currentColorTheme.red),
+                        ),
+                      );
+                    } else if (state is FriendsLoadedState) {
+                      return FriendsListView(
+                        state: state,
+                        themeProvider: themeProvider,
+                      );
+                    }
+                    return Container();
+                  },
+                ),
+                if (_recognizedText.isNotEmpty)
+                  Positioned(
+                    bottom: 80,
+                    left: 16,
+                    right: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: themeProvider.currentColorTheme.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 6,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        'Вы сказали: $_recognizedText',
+                        style: themeProvider.currentTheme.textTheme.labelMedium,
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                  );
-                } else if (state is FriendsErrorState) {
-                  return Center(
-                    child: Text(
-                      state.error,
-                      style: themeProvider.currentTheme.textTheme.labelMedium
-                          ?.copyWith(
-                              color: themeProvider.currentColorTheme.red),
-                    ),
-                  );
-                } else if (state is FriendsLoadedState) {
-                  return FriendsListView(
-                      state: state, themeProvider: themeProvider);
-                }
-                return Container();
-              },
+                  ),
+              ],
             ),
+            floatingActionButton: FloatingActionButton(
+              onPressed: () {
+                if (_voiceAssistant.isListening) {
+                  _voiceAssistant.stopListening();
+                } else {
+                  _voiceAssistant.startListening(
+                    context,
+                    onTextRecognized: _handleRecognizedText,
+                  );
+                }
+              },
+              child: Icon(
+                _voiceAssistant.isListening ? Icons.mic_off : Icons.mic,
+              ),
+              backgroundColor: themeProvider.currentColorTheme.primary,
+            ),
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.centerFloat,
           );
         },
       ),
