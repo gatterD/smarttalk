@@ -34,8 +34,6 @@ class SearchRepository {
 
   /// Добавляем пользователя в друзья
   Future<bool> addFriend(int friendId, int currentUserId) async {
-    if (currentUserId == null) return false;
-
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/users/$currentUserId/friends'),

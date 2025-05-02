@@ -62,65 +62,45 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                 )
               ],
             ),
-            body: Stack(
-              children: [
-                BlocBuilder<FriendsBloc, FriendsState>(
-                  builder: (context, state) {
-                    if (state is FriendsLoadingState) {
-                      return Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                              themeProvider.currentColorTheme.drawerDivider),
-                        ),
-                      );
-                    } else if (state is FriendsErrorState) {
-                      return Center(
-                        child: Text(
-                          state.error,
-                          style: themeProvider
-                              .currentTheme.textTheme.labelMedium
-                              ?.copyWith(
-                                  color: themeProvider.currentColorTheme.red),
-                        ),
-                      );
-                    } else if (state is FriendsLoadedState) {
-                      return FriendsListView(
-                        state: state,
-                        themeProvider: themeProvider,
-                      );
-                    }
-                    return Container();
-                  },
-                ),
-                if (_recognizedText.isNotEmpty)
-                  Positioned(
-                    bottom: 80,
-                    left: 16,
-                    right: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: themeProvider.currentColorTheme.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 6,
-                            offset: Offset(0, 3),
-                          ),
-                        ],
+            body: Stack(children: [
+              BlocBuilder<FriendsBloc, FriendsState>(
+                builder: (context, state) {
+                  if (state is FriendsLoadingState) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            themeProvider.currentColorTheme.drawerDivider),
                       ),
+                    );
+                  } else if (state is FriendsErrorState) {
+                    return Center(
                       child: Text(
-                        'Вы сказали: $_recognizedText',
-                        style: themeProvider.currentTheme.textTheme.labelMedium,
-                        textAlign: TextAlign.center,
+                        state.error,
+                        style: themeProvider.currentTheme.textTheme.labelMedium
+                            ?.copyWith(
+                                color: themeProvider.currentColorTheme.red),
                       ),
-                    ),
-                  ),
-              ],
-            ),
+                    );
+                  } else if (state is FriendsLoadedState) {
+                    return FriendsListView(
+                      state: state,
+                      themeProvider: themeProvider,
+                    );
+                  }
+                  return Container();
+                },
+              ),
+              if (_recognizedText.isNotEmpty)
+                Positioned(
+                  bottom: 80,
+                  left: 16,
+                  right: 16,
+                  child: RecognizedTextWidget(
+                      themeProvider: themeProvider,
+                      recognizedText: _recognizedText),
+                )
+            ]),
             floatingActionButton: FloatingActionButton(
               onPressed: () {
                 if (_voiceAssistant.isListening) {
@@ -146,6 +126,34 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
   }
 }
 
+class RecognizedTextWidget extends StatefulWidget {
+  final themeProvider;
+  final recognizedText;
+
+  const RecognizedTextWidget(
+      {super.key, this.themeProvider, this.recognizedText});
+  @override
+  State<RecognizedTextWidget> createState() => _RecognizedTextWidgetState();
+}
+
+class _RecognizedTextWidgetState extends State<RecognizedTextWidget> {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: widget.themeProvider.currentColorTheme.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        'Вы сказали: ${widget.recognizedText}',
+        style: widget.themeProvider.currentTheme.textTheme.labelMedium,
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
 class FriendsDrawer extends StatelessWidget {
   const FriendsDrawer({super.key});
 
@@ -154,6 +162,7 @@ class FriendsDrawer extends StatelessWidget {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return BlocBuilder<FriendsBloc, FriendsState>(
+          buildWhen: (previous, current) => current != previous,
           builder: (context, state) {
             String username = '';
             if (state is FriendsLoadedState) {
@@ -318,139 +327,152 @@ class FriendsListView extends StatelessWidget {
               itemBuilder: (context, index) {
                 final friend = state.sortedFriends[index];
                 final isPinned = state.pinnedFriends.contains(friend["id"]);
+                final isMulti = isMultiUser(friend['username']);
 
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Slidable(
-                    key: ValueKey(friend['id']),
-                    endActionPane: ActionPane(
-                      motion: const ScrollMotion(),
-                      children: [
-                        SlidableAction(
-                          onPressed: (context) {
-                            context.read<FriendsBloc>().add(
-                                  DeleteConversationEvent(
-                                      friend['id'].toString()),
-                                );
-                          },
-                          backgroundColor: themeProvider.currentColorTheme.red,
-                          icon: Icons.delete,
-                          label: 'Добавить в ЧС',
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ],
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            themeProvider.currentColorTheme.background,
-                            themeProvider.currentColorTheme.backgroundLight,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: themeProvider.currentColorTheme.black,
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        leading: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [
-                                themeProvider.currentColorTheme.primary,
-                                themeProvider.currentColorTheme.accent,
-                              ],
-                            ),
-                          ),
-                          child: Center(
-                            child: friend['username'] == state.currentUsername
-                                ? const Icon(Icons.bookmark, size: 20)
-                                : Text(
-                                    friend['username'][0].toUpperCase(),
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        title: Text(
-                          friend['username'] == state.currentUsername
-                              ? 'Favorite'
-                              : friend['username'],
-                          style: themeProvider
-                              .currentTheme.textTheme.labelMedium
-                              ?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        subtitle: Text(
-                          'ID: ${friend['id']}',
-                          style: themeProvider.currentTheme.textTheme.labelSmall
-                              ?.copyWith(
-                            fontSize: 12,
-                          ),
-                        ),
-                        trailing: isPinned
-                            ? Icon(
-                                Icons.push_pin,
-                                color: themeProvider
-                                    .currentColorTheme.mediumbackground,
-                              )
-                            : state.sortedFriends
-                                    .any((f) => f['id'] == friend['id'])
-                                ? IconButton(
-                                    onPressed: () {
-                                      context.read<FriendsBloc>().add(
-                                            PinConversationEvent(
-                                                friend['id'].toString()),
-                                          );
-                                    },
-                                    icon: Icon(
-                                      Icons.push_pin_outlined,
-                                      color:
-                                          themeProvider.currentColorTheme.gray,
-                                    ),
-                                  )
-                                : Icon(
-                                    Icons.no_accounts,
-                                    color: themeProvider.currentColorTheme.gray,
-                                  ),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => UsersMessageScreen(
-                                usersName: friend['username'],
-                                isMultiConversation:
-                                    isMultiUser(friend['username']),
-                                convID: friend['id'],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
+                return FriendListItem(
+                  friend: friend,
+                  isPinned: isPinned,
+                  isMultiConversation: isMulti,
+                  currentUsername: state.currentUsername,
+                  themeProvider: themeProvider,
                 );
               },
               separatorBuilder: (BuildContext context, int index) =>
                   const SizedBox(height: 12),
             ),
+    );
+  }
+}
+
+class FriendListItem extends StatelessWidget {
+  final Map<String, dynamic> friend;
+  final bool isPinned;
+  final bool isMultiConversation;
+  final String currentUsername;
+  final ThemeProvider themeProvider;
+
+  const FriendListItem({
+    super.key,
+    required this.friend,
+    required this.isPinned,
+    required this.isMultiConversation,
+    required this.currentUsername,
+    required this.themeProvider,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Slidable(
+        key: ValueKey(friend['id']),
+        endActionPane: ActionPane(
+          motion: const ScrollMotion(),
+          children: [
+            SlidableAction(
+              onPressed: (_) {
+                context.read<FriendsBloc>().add(
+                      DeleteConversationEvent(friend['id'].toString()),
+                    );
+              },
+              backgroundColor: themeProvider.currentColorTheme.red,
+              icon: Icons.delete,
+              label: 'Добавить в ЧС',
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ],
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                themeProvider.currentColorTheme.background,
+                themeProvider.currentColorTheme.backgroundLight,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: themeProvider.currentColorTheme.black.withOpacity(0.1),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    themeProvider.currentColorTheme.primary,
+                    themeProvider.currentColorTheme.accent,
+                  ],
+                ),
+              ),
+              child: Center(
+                child: friend['username'] == currentUsername
+                    ? const Icon(Icons.bookmark, size: 20)
+                    : Text(
+                        friend['username'][0].toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
+            title: Text(
+              friend['username'] == currentUsername
+                  ? 'Favorite'
+                  : friend['username'],
+              style: themeProvider.currentTheme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            subtitle: Text(
+              'ID: ${friend['id']}',
+              style: themeProvider.currentTheme.textTheme.labelSmall?.copyWith(
+                fontSize: 12,
+              ),
+            ),
+            trailing: isPinned
+                ? Icon(
+                    Icons.push_pin,
+                    color: themeProvider.currentColorTheme.mediumbackground,
+                  )
+                : IconButton(
+                    onPressed: () {
+                      context.read<FriendsBloc>().add(
+                            PinConversationEvent(friend['id'].toString()),
+                          );
+                    },
+                    icon: Icon(
+                      Icons.push_pin_outlined,
+                      color: themeProvider.currentColorTheme.gray,
+                    ),
+                  ),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UsersMessageScreen(
+                    usersName: friend['username'],
+                    isMultiConversation: isMultiConversation,
+                    convID: friend['id'],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 }
