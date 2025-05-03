@@ -39,15 +39,6 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
       friends = await repository.fetchFriends(currentUserId!);
       pinnedFriends = await repository.fetchPinnedFriends(currentUserId!);
 
-      // Process pinned friends
-      pinnedFriendsList = pinnedFriends
-          .map((id) {
-            return friends.firstWhere((friend) => friend["id"] == id,
-                orElse: () => null);
-          })
-          .where((friend) => friend != null)
-          .toList();
-
       // Process other conversations
       final otherConvs =
           await repository.fetchOtherConversations(currentUserId!);
@@ -76,21 +67,34 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         };
       }).toList();
 
-      sortedFriends = [
-        ...friends,
-        ...otherConversations,
-        ...multiConversations,
-      ];
-      // Sort friends
-      List<dynamic> filteredFriends = friends
-          .where((friend) => !pinnedFriendsList.contains(friend))
+      // Process pinned users
+      final pinnedConversationsList = pinnedFriends
+          .map((id) {
+            // Сначала ищем среди друзей
+            final friend = friends.firstWhere((friend) => friend["id"] == id,
+                orElse: () => null);
+            if (friend != null) return friend;
+
+            // Если не найден среди друзей, ищем в других переписках
+            final otherConv = otherConversations
+                .firstWhere((conv) => conv["id"] == id, orElse: () => null);
+            if (otherConv != null) return otherConv;
+
+            // Если не найден там, ищем в групповых чатах
+            final multiConv = multiConversations
+                .firstWhere((conv) => conv["id"] == id, orElse: () => null);
+            return multiConv;
+          })
+          .where((conversation) => conversation != null)
           .toList();
 
       sortedFriends = [
-        ...pinnedFriendsList,
-        ...filteredFriends,
-        ...otherConversations,
-        ...multiConversations,
+        ...pinnedConversationsList,
+        ...friends.where((friend) => !pinnedFriends.contains(friend["id"])),
+        ...otherConversations
+            .where((conv) => !pinnedFriends.contains(conv["id"])),
+        ...multiConversations
+            .where((conv) => !pinnedFriends.contains(conv["id"])),
       ];
 
       emit(FriendsLoadedState(
