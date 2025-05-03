@@ -13,6 +13,10 @@ class RegisterLoading extends RegisterState {}
 
 class RegisterSuccess extends RegisterState {}
 
+class AddingFavoriteChat extends RegisterState {}
+
+class AddedFavoriteChat extends RegisterState {}
+
 class RegisterFailure extends RegisterState {
   final String error;
 

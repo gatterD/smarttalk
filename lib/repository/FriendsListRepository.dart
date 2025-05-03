@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,6 +40,9 @@ class FriendsRepository {
     final response = await http.get(Uri.parse('$baseUrl/conversation/$userId'));
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
+    }
+    if (response.statusCode == 204) {
+      debugPrint("Нет других переписок");
     }
     throw Exception(
         'Failed to load other conversations (Code: ${response.statusCode})');

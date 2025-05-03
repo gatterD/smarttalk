@@ -76,10 +76,16 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         };
       }).toList();
 
+      sortedFriends = [
+        ...friends,
+        ...otherConversations,
+        ...multiConversations,
+      ];
       // Sort friends
       List<dynamic> filteredFriends = friends
           .where((friend) => !pinnedFriendsList.contains(friend))
           .toList();
+
       sortedFriends = [
         ...pinnedFriendsList,
         ...filteredFriends,
