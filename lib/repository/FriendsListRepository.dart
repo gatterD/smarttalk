@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -40,6 +41,9 @@ class FriendsRepository {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     }
+    if (response.statusCode == 204) {
+      debugPrint("Нет других переписок");
+    }
     throw Exception(
         'Failed to load other conversations (Code: ${response.statusCode})');
   }
@@ -71,6 +75,18 @@ class FriendsRepository {
       Uri.parse('$baseUrl/pinned'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'id': userId, 'friendId': friendId}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception(
+          'Failed to pin conversation (Code: ${response.statusCode})');
+    }
+  }
+
+  Future<void> unpinUser(String currentUserID, String secondID) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/unpin'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'id': currentUserID, 'friendId': secondID}),
     );
     if (response.statusCode != 200) {
       throw Exception(

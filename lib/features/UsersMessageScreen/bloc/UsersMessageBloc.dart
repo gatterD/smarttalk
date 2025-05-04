@@ -34,7 +34,7 @@ class UsersMessageBloc extends Bloc<UsersMessageEvent, UsersMessageState> {
         _secondUserID =
             await _repository.getUserIdByUsername(event.secondUserName);
         _conversationId = await _repository.initializeConversation(
-            _currentUserId, event.convID);
+            _currentUserId, _secondUserID);
         _blackList = await _repository.getBlackList(event.convID.toString());
         _isBlocked =
             await _repository.chekBlackList(_blackList, _currentUserId);

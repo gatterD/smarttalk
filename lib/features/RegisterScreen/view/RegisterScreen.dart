@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:provider/provider.dart'; // Import Provider package
+import 'package:provider/provider.dart';
+import 'package:smarttalk/repository/RegisterRepository.dart';
 import 'package:smarttalk/services/PasswordValidate.dart';
 import 'package:smarttalk/services/UserNameValidation.dart';
 import 'package:smarttalk/models/AutorisationHelper.dart';
 import 'package:smarttalk/features/RegisterScreen/bloc/RegisterBloc.dart';
-import 'package:smarttalk/provider/ThemeProvider.dart'; // Import ThemeProvider
+import 'package:smarttalk/provider/ThemeProvider.dart';
 
 class RegisterScreen extends StatelessWidget {
   final _formKey = GlobalKey<FormState>();
@@ -27,32 +28,51 @@ class RegisterScreen extends StatelessWidget {
           ),
           body: BlocProvider(
             create: (context) => RegisterBloc(
-              authService: AuthService(),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 50),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 32.0),
-                      child: Image.asset(
-                        'assets/images/smarttalk_logo.png',
-                        width: MediaQuery.of(context).size.width * 0.5,
-                        fit: BoxFit.contain,
+                authService: AuthService(), repository: RegisterRepository()),
+            child: BlocListener<RegisterBloc, RegisterState>(
+              listener: (context, state) {
+                if (state is RegisterSuccess) {
+                  // После успешной регистрации создаем беседу
+                  context
+                      .read<RegisterBloc>()
+                      .add(RegisterFavoriteChatCreation());
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Registration successful')),
+                  );
+
+                  // Можно добавить навигацию на другой экран после создания беседы
+                  // Navigator.pushReplacement(context, ...);
+                } else if (state is RegisterFailure) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(state.error)),
+                  );
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 50),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 32.0),
+                        child: Image.asset(
+                          'assets/images/smarttalk_logo.png',
+                          width: MediaQuery.of(context).size.width * 0.5,
+                          fit: BoxFit.contain,
+                        ),
                       ),
-                    ),
-                    _buildUsernameField(themeProvider),
-                    const SizedBox(height: 20),
-                    _buildPasswordField(themeProvider),
-                    const SizedBox(height: 20),
-                    _buildPasswordConfirmationField(themeProvider),
-                    const SizedBox(height: 20),
-                    _buildRegisterButton(context, themeProvider),
-                    _buildBlocListener(),
-                  ],
+                      _buildUsernameField(themeProvider),
+                      const SizedBox(height: 20),
+                      _buildPasswordField(themeProvider),
+                      const SizedBox(height: 20),
+                      _buildPasswordConfirmationField(themeProvider),
+                      const SizedBox(height: 20),
+                      _buildRegisterButton(context, themeProvider),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -95,7 +115,14 @@ class RegisterScreen extends StatelessWidget {
         hintStyle: themeProvider.currentTheme.textTheme.bodyMedium,
       ),
       style: themeProvider.currentTheme.textTheme.bodyMedium,
-      validator: validatePassword,
+      validator: (value) {
+        final passwordError = validatePassword(value);
+        if (passwordError != null) return passwordError;
+        if (value != _passwordController.text) {
+          return 'Passwords must match';
+        }
+        return null;
+      },
       obscureText: true,
     );
   }
@@ -109,20 +136,12 @@ class RegisterScreen extends StatelessWidget {
               ? null
               : () {
                   if (_formKey.currentState!.validate()) {
-                    if (comparePasswords(_passwordController.text,
-                        _passwordSecondController.text)) {
-                      context.read<RegisterBloc>().add(
-                            RegisterSubmitted(
-                              username: _usernameController.text,
-                              password: _passwordController.text,
-                            ),
-                          );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Passwords must be the same!')),
-                      );
-                    }
+                    context.read<RegisterBloc>().add(
+                          RegisterSubmitted(
+                            username: _usernameController.text,
+                            password: _passwordController.text,
+                          ),
+                        );
                   }
                 },
           style: ElevatedButton.styleFrom(
@@ -133,23 +152,6 @@ class RegisterScreen extends StatelessWidget {
               : const Text('Register'),
         );
       },
-    );
-  }
-
-  Widget _buildBlocListener() {
-    return BlocListener<RegisterBloc, RegisterState>(
-      listener: (context, state) {
-        if (state is RegisterSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Registration successful')),
-          );
-        } else if (state is RegisterFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.error)),
-          );
-        }
-      },
-      child: const SizedBox.shrink(),
     );
   }
 }

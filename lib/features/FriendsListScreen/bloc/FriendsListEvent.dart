@@ -9,6 +9,11 @@ class PinConversationEvent extends FriendsEvent {
   PinConversationEvent(this.friendId);
 }
 
+class UnpinConversationEvent extends FriendsEvent {
+  final String friendId;
+  UnpinConversationEvent(this.friendId);
+}
+
 class DeleteConversationEvent extends FriendsEvent {
   final String friendId;
   DeleteConversationEvent(this.friendId);

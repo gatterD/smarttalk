@@ -19,3 +19,5 @@ class RegisterSubmitted extends RegisterEvent {
   @override
   List<Object> get props => [username, password];
 }
+
+class RegisterFavoriteChatCreation extends RegisterEvent {}
