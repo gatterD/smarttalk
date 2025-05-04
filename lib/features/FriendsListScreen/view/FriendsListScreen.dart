@@ -225,7 +225,8 @@ class FriendsDrawer extends StatelessWidget {
                         _buildDrawerItem(
                           icon: Icons.settings,
                           text: 'Настройки',
-                          onTap: () {},
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/settings'),
                           themeProvider: themeProvider,
                         ),
                         _buildDrawerItem(
