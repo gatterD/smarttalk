@@ -443,9 +443,16 @@ class FriendListItem extends StatelessWidget {
               ),
             ),
             trailing: isPinned
-                ? Icon(
-                    Icons.push_pin,
-                    color: themeProvider.currentColorTheme.mediumbackground,
+                ? IconButton(
+                    onPressed: () {
+                      context.read<FriendsBloc>().add(
+                            UnpinConversationEvent(friend['id'].toString()),
+                          );
+                    },
+                    icon: Icon(
+                      Icons.push_pin,
+                      color: themeProvider.currentColorTheme.mediumbackground,
+                    ),
                   )
                 : IconButton(
                     onPressed: () {

@@ -82,6 +82,18 @@ class FriendsRepository {
     }
   }
 
+  Future<void> unpinUser(String currentUserID, String secondID) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/unpin'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'id': currentUserID, 'friendId': secondID}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception(
+          'Failed to pin conversation (Code: ${response.statusCode})');
+    }
+  }
+
   Future<Map<String, dynamic>> getUserInfo(String userId) async {
     final response = await http.get(Uri.parse('$baseUrl/user/$userId'));
     if (response.statusCode == 200) {

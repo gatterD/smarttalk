@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smarttalk/repository/FriendsListRepository.dart';
 
@@ -22,6 +21,7 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
   FriendsBloc(this.repository) : super(FriendsLoadingState()) {
     on<LoadFriendsEvent>(_onLoadFriends);
     on<PinConversationEvent>(_onPinConversation);
+    on<UnpinConversationEvent>(_onUnpinUser);
     on<DeleteConversationEvent>(_onDeleteConversation);
     on<LogoutEvent>(_onLogout);
   }
@@ -122,6 +122,18 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
       if (currentUserId == null) return;
 
       await repository.pinConversation(currentUserId!, event.friendId);
+      add(LoadFriendsEvent());
+    } catch (e) {
+      emit(FriendsErrorState(e.toString()));
+    }
+  }
+
+  Future<void> _onUnpinUser(
+      UnpinConversationEvent event, Emitter<FriendsState> emit) async {
+    try {
+      if (currentUserId == null) return;
+
+      await repository.unpinUser(currentUserId!, event.friendId);
       add(LoadFriendsEvent());
     } catch (e) {
       emit(FriendsErrorState(e.toString()));
