@@ -56,7 +56,7 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
       final success = await authService.register(user);
       if (success) {
         _currentUser = user;
-        emit(RegisterSuccess());
+        emit(RegisterCreatingFavoritesSuccess());
       } else {
         emit(RegisterFailure(error: 'Registration failed'));
       }

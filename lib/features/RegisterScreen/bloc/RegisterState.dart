@@ -25,3 +25,5 @@ class RegisterFailure extends RegisterState {
   @override
   List<Object> get props => [error];
 }
+
+class RegisterCreatingFavoritesSuccess extends RegisterState {}

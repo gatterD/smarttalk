@@ -32,7 +32,6 @@ class RegisterScreen extends StatelessWidget {
             child: BlocListener<RegisterBloc, RegisterState>(
               listener: (context, state) {
                 if (state is RegisterSuccess) {
-                  // После успешной регистрации создаем беседу
                   context
                       .read<RegisterBloc>()
                       .add(RegisterFavoriteChatCreation());
@@ -40,12 +39,15 @@ class RegisterScreen extends StatelessWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Registration successful')),
                   );
-
-                  // Можно добавить навигацию на другой экран после создания беседы
-                  // Navigator.pushReplacement(context, ...);
                 } else if (state is RegisterFailure) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(state.error)),
+                  );
+                }
+                if (state is RegisterCreatingFavoritesSuccess) {
+                  Navigator.pushNamed(context, '/login');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Registration successful')),
                   );
                 }
               },
