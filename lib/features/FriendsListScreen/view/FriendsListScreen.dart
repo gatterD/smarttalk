@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -420,12 +422,20 @@ class FriendListItem extends StatelessWidget {
               child: Center(
                 child: friend['username'] == currentUsername
                     ? const Icon(Icons.bookmark, size: 20)
-                    : Text(
-                        friend['username'][0].toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    : CircleAvatar(
+                        backgroundColor: Colors.transparent,
+                        backgroundImage: friend['user_photo'] != null
+                            ? MemoryImage(friend['user_photo'] as Uint8List)
+                            : null,
+                        child: friend['user_photo'] == null
+                            ? Text(
+                                friend['username'][0].toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            : null,
                       ),
               ),
             ),
