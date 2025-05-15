@@ -35,7 +35,7 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
 
       int userID = await repository.getUserIdByUsername(_currentUser!.username);
       await repository.CreateConversation(userID.toString(), userID.toString());
-      emit(RegisterSuccess());
+      emit(RegisterCreatingFavoritesSuccess());
     } catch (e) {
       emit(RegisterFailure(
           error:
@@ -56,7 +56,7 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
       final success = await authService.register(user);
       if (success) {
         _currentUser = user;
-        emit(RegisterCreatingFavoritesSuccess());
+        emit(RegisterSuccess());
       } else {
         emit(RegisterFailure(error: 'Registration failed'));
       }

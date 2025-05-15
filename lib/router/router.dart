@@ -18,6 +18,7 @@ final router = {
         usersName: '',
         isMultiConversation: false,
         convID: 0,
+        messageOnVoiceAssistant: null,
       ),
   '/search': (context) => SearchScreen(),
   '/black_list': (context) => BlackListScreen(),
@@ -26,7 +27,7 @@ final router = {
         future: SharedPreferences.getInstance(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const CircularProgressIndicator(); // Или загрузочный экран
+            return const CircularProgressIndicator();
           }
 
           final prefs = snapshot.data!;
