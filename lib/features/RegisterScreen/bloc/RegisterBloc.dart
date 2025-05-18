@@ -5,11 +5,14 @@ import 'package:smarttalk/models/AutorisationHelper.dart';
 import 'package:smarttalk/models/User.dart';
 import 'package:smarttalk/repository/RegisterRepository.dart';
 
+import '../../../services/EncryptionService.dart';
+
 part 'RegisterEvent.dart';
 part 'RegisterState.dart';
 
 class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
   final RegisterRepository repository;
+  EncryptionService _encryptionService = new EncryptionService();
   final AuthService authService;
   User? _currentUser;
 
@@ -51,7 +54,7 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
     try {
       final user = User(
         username: event.username,
-        password: event.password,
+        password: _encryptionService.encrypt(event.password),
       );
       final success = await authService.register(user);
       if (success) {

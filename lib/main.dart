@@ -60,6 +60,7 @@ Future<void> main() async {
           child: Consumer<ThemeProvider>(
             builder: (context, themeProvider, child) {
               return MaterialApp(
+                debugShowCheckedModeBanner: false,
                 theme: themeProvider.currentTheme,
                 home: SmartTalkApp(isLoggedIn: token != null),
               );
