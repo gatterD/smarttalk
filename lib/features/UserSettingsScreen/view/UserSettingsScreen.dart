@@ -53,28 +53,33 @@ class _ProfileSettingsContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _ProfilePhotoSection(
-            userId: userId,
-            themeProvider: themeProvider,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 600),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _ProfilePhotoSection(
+                userId: userId,
+                themeProvider: themeProvider,
+              ),
+              const SizedBox(height: 24),
+              _buildOtherSettings(),
+            ],
           ),
-          const SizedBox(height: 24),
-          _buildOtherSettings(),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildOtherSettings() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           'Другие настройки',
           style: themeProvider.currentTheme.textTheme.headlineLarge,
         ),
-        // Другие элементы настроек...
       ],
     );
   }
@@ -99,6 +104,9 @@ class _ProfilePhotoSection extends StatelessWidget {
         }
 
         return Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             CircleAvatar(
               radius: 60,
