@@ -9,7 +9,7 @@ import '../../AutorisationScreen/Autorisation.dart';
 import 'package:smarttalk/features/FriendsListScreen/bloc/FriendsListBloc.dart';
 import 'package:smarttalk/repository/FriendsListRepository.dart';
 import 'package:smarttalk/provider/ThemeProvider.dart';
-import 'package:smarttalk/services/VoiseAssistant.dart';
+import 'package:smarttalk/services/VoiceAssistant.dart';
 
 class FriendsListScreen extends StatefulWidget {
   FriendsListScreen({super.key});
