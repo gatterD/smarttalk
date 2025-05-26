@@ -178,8 +178,15 @@ class FriendsDrawer extends StatelessWidget {
           buildWhen: (previous, current) => current != previous,
           builder: (context, state) {
             String username = '';
+            Map<String, dynamic> user = {};
             if (state is FriendsLoadedState) {
               username = state.currentUsername;
+              for (var friend in state.sortedFriends) {
+                if (friend['username'] == username) {
+                  user = friend;
+                  break;
+                }
+              }
             }
 
             return Drawer(
@@ -201,25 +208,31 @@ class FriendsDrawer extends StatelessWidget {
                     ),
                     accountEmail: null,
                     currentAccountPicture: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            themeProvider.currentColorTheme.lightText,
-                            themeProvider.currentColorTheme.accent,
-                          ],
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              themeProvider.currentColorTheme.lightText,
+                              themeProvider.currentColorTheme.accent,
+                            ],
+                          ),
                         ),
-                      ),
-                      child: CircleAvatar(
-                        backgroundColor:
-                            themeProvider.currentColorTheme.mediumbackground,
-                        child: Text(
-                          username.isNotEmpty ? username[0].toUpperCase() : '?',
-                          style: themeProvider
-                              .currentTheme.textTheme.headlineLarge,
-                        ),
-                      ),
-                    ),
+                        child: CircleAvatar(
+                          backgroundColor:
+                              themeProvider.currentColorTheme.mediumbackground,
+                          backgroundImage: user['user_photo'] != null
+                              ? MemoryImage(user['user_photo'] as Uint8List)
+                              : null,
+                          child: Text(
+                            username.isNotEmpty
+                                ? user['user_photo'] != null
+                                    ? ''
+                                    : username[0].toUpperCase()
+                                : '?',
+                            style: themeProvider
+                                .currentTheme.textTheme.headlineLarge,
+                          ),
+                        )),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
@@ -397,24 +410,6 @@ class FriendListItem extends StatelessWidget {
           ],
         ),
         child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                themeProvider.currentColorTheme.background,
-                themeProvider.currentColorTheme.backgroundLight,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: themeProvider.currentColorTheme.black.withOpacity(0.1),
-                blurRadius: 6,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
           child: ListTile(
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
