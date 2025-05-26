@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smarttalk/repository/FriendsListRepository.dart';
+import 'package:smarttalk/models/UsersPhotoModel.dart';
 
 part 'FriendsListEvent.dart';
 part 'FriendsListState.dart';
 
 class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
   final FriendsRepository repository;
+  final UsersPhotoModel _photoModel = UsersPhotoModel();
 
   List<dynamic> friends = [];
   List<dynamic> pinnedFriends = [];
@@ -71,24 +73,20 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
       // Process pinned users
       final pinnedConversationsList = pinnedFriends
           .map((id) {
-            // Сначала ищем среди друзей
             final friend = friends.firstWhere((friend) => friend["id"] == id,
                 orElse: () => <String, dynamic>{});
             if (friend.isNotEmpty) return friend;
 
-            // Если не найден среди друзей, ищем в других переписках
             final otherConv = otherConversations.firstWhere(
                 (conv) => conv["id"] == id,
                 orElse: () => <String, dynamic>{});
             if (otherConv.isNotEmpty) return otherConv;
 
-            // Если не найден там, ищем в групповых чатах
             final multiConv = multiConversations.firstWhere(
                 (conv) => conv["id"] == id,
                 orElse: () => <String, dynamic>{});
             if (multiConv.isNotEmpty) return multiConv;
 
-            // Возвращаем null, если ничего не найдено
             return null;
           })
           .where((conversation) => conversation != null)
@@ -103,6 +101,7 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
             .where((conv) => !pinnedFriends.contains(conv["id"])),
       ];
 
+      sortedFriends = await _photoModel.enrichUsersWithPhotos(sortedFriends);
       emit(FriendsLoadedState(
         sortedFriends: sortedFriends,
         pinnedFriends: pinnedFriends,
@@ -120,7 +119,10 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
       PinConversationEvent event, Emitter<FriendsState> emit) async {
     try {
       if (currentUserId == null) return;
-
+      if (pinnedFriends.length >= 5) {
+        emit(FriendsErrorState('You cannot pin more than 5 friends.'));
+        return;
+      }
       await repository.pinConversation(currentUserId!, event.friendId);
       add(LoadFriendsEvent());
     } catch (e) {

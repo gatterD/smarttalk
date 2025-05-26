@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:provider/provider.dart'; // Import Provider package
+import 'package:provider/provider.dart';
 import 'package:smarttalk/features/UsersMessageScreen/UsersMessage.dart';
 import 'package:smarttalk/features/SearchScreen/bloc/SearchBloc.dart';
-import 'package:smarttalk/provider/ThemeProvider.dart'; // Import ThemeProvider
+import 'package:smarttalk/provider/ThemeProvider.dart';
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -128,6 +128,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               usersName: user['username'],
                               isMultiConversation: false,
                               convID: user['id'],
+                              messageOnVoiceAssistant: null,
                             ),
                           ),
                         );

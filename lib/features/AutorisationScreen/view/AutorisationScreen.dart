@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:provider/provider.dart'; // Import Provider package
+import 'package:provider/provider.dart'; // Пакет Provider
 import '../bloc/AutorisationBloc.dart';
-import 'package:smarttalk/provider/ThemeProvider.dart'; // Import ThemeProvider
+import 'package:smarttalk/provider/ThemeProvider.dart'; // Импорт ThemeProvider
 
 class AutorisationScreen extends StatelessWidget {
   final _usernameController = TextEditingController();
@@ -32,7 +32,7 @@ class AutorisationScreen extends StatelessWidget {
                     TextField(
                       controller: _usernameController,
                       decoration: InputDecoration(
-                        hintText: 'Enter username',
+                        hintText: 'Введите имя пользователя',
                         hintStyle:
                             themeProvider.currentTheme.textTheme.bodyMedium,
                       ),
@@ -43,7 +43,7 @@ class AutorisationScreen extends StatelessWidget {
                       controller: _passwordController,
                       obscureText: true,
                       decoration: InputDecoration(
-                        hintText: 'Enter password',
+                        hintText: 'Введите пароль',
                         hintStyle:
                             themeProvider.currentTheme.textTheme.bodyMedium,
                       ),
@@ -55,7 +55,8 @@ class AutorisationScreen extends StatelessWidget {
                         if (state is AutorisationSuccess) {
                           Navigator.pushNamed(context, '/friend_list');
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('You have logged in.')),
+                            SnackBar(
+                                content: Text('Вы успешно вошли в систему.')),
                           );
                         } else if (state is AutorisationFailure) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -76,7 +77,7 @@ class AutorisationScreen extends StatelessWidget {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                     content: Text(
-                                        'Username and password cannot be empty!')),
+                                        'Имя пользователя и пароль не могут быть пустыми!')),
                               );
                               return;
                             }
@@ -84,7 +85,7 @@ class AutorisationScreen extends StatelessWidget {
                                 .read<AutorisationBloc>()
                                 .add(LoginEvent(username, password));
                           },
-                          child: const Text('Enter'),
+                          child: const Text('Войти'),
                         );
                       },
                     ),
@@ -92,7 +93,7 @@ class AutorisationScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'You have no account?',
+                          'Нет аккаунта?',
                           style:
                               themeProvider.currentTheme.textTheme.labelMedium,
                         ),
@@ -101,7 +102,7 @@ class AutorisationScreen extends StatelessWidget {
                             Navigator.pushNamed(context, '/register');
                           },
                           child: Text(
-                            'Register',
+                            'Зарегистрироваться',
                             style: themeProvider
                                 .currentTheme.textTheme.labelMedium,
                           ),

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -7,7 +9,7 @@ import '../../AutorisationScreen/Autorisation.dart';
 import 'package:smarttalk/features/FriendsListScreen/bloc/FriendsListBloc.dart';
 import 'package:smarttalk/repository/FriendsListRepository.dart';
 import 'package:smarttalk/provider/ThemeProvider.dart';
-import 'package:smarttalk/services/VoiseAssistant.dart'; // Убедитесь, что путь правильный
+import 'package:smarttalk/services/VoiceAssistant.dart';
 
 class FriendsListScreen extends StatefulWidget {
   FriendsListScreen({super.key});
@@ -18,7 +20,17 @@ class FriendsListScreen extends StatefulWidget {
 
 class _FriendsListScreenState extends State<FriendsListScreen> {
   final VoiceAssistant _voiceAssistant = VoiceAssistant();
-  String _recognizedText = ''; // Добавим переменную
+  String _recognizedText = '';
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<FriendsBloc>().stream.listen((state) {
+      if (state is FriendsLoadedState) {
+        _voiceAssistant.updateFriendsList(state.sortedFriends);
+      }
+    });
+  }
 
   void _handleRecognizedText(String text) {
     setState(() {
@@ -66,22 +78,18 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
               BlocBuilder<FriendsBloc, FriendsState>(
                 builder: (context, state) {
                   if (state is FriendsLoadingState) {
-                    return Center(
+                    return const Center(
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            themeProvider.currentColorTheme.drawerDivider),
                       ),
                     );
                   } else if (state is FriendsErrorState) {
-                    return Center(
-                      child: Text(
-                        state.error,
-                        style: themeProvider.currentTheme.textTheme.labelMedium
-                            ?.copyWith(
-                                color: themeProvider.currentColorTheme.red),
-                      ),
-                    );
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(state.error)),
+                      );
+                    });
+                    context.read<FriendsBloc>().add(LoadFriendsEvent());
                   } else if (state is FriendsLoadedState) {
                     return FriendsListView(
                       state: state,
@@ -101,21 +109,26 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                       recognizedText: _recognizedText),
                 )
             ]),
-            floatingActionButton: FloatingActionButton(
-              onPressed: () {
-                if (_voiceAssistant.isListening) {
-                  _voiceAssistant.stopListening();
-                } else {
-                  _voiceAssistant.startListening(
-                    context,
-                    onTextRecognized: _handleRecognizedText,
-                  );
-                }
+            floatingActionButton: GestureDetector(
+              onTapDown: (_) {
+                _voiceAssistant.startListening(
+                  context,
+                  onTextRecognized: _handleRecognizedText,
+                );
               },
-              child: Icon(
-                _voiceAssistant.isListening ? Icons.mic_off : Icons.mic,
+              onTapUp: (_) {
+                _voiceAssistant.stopListening();
+              },
+              onTapCancel: () {
+                _voiceAssistant.stopListening();
+              },
+              child: FloatingActionButton(
+                onPressed: () {},
+                child: Icon(
+                  _voiceAssistant.isListening ? Icons.mic_off : Icons.mic,
+                ),
+                backgroundColor: themeProvider.currentColorTheme.primary,
               ),
-              backgroundColor: themeProvider.currentColorTheme.primary,
             ),
             floatingActionButtonLocation:
                 FloatingActionButtonLocation.centerFloat,
@@ -225,7 +238,8 @@ class FriendsDrawer extends StatelessWidget {
                         _buildDrawerItem(
                           icon: Icons.settings,
                           text: 'Настройки',
-                          onTap: () {},
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/settings'),
                           themeProvider: themeProvider,
                         ),
                         _buildDrawerItem(
@@ -419,12 +433,21 @@ class FriendListItem extends StatelessWidget {
               child: Center(
                 child: friend['username'] == currentUsername
                     ? const Icon(Icons.bookmark, size: 20)
-                    : Text(
-                        friend['username'][0].toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    : CircleAvatar(
+                        backgroundColor:
+                            themeProvider.currentColorTheme.mediumbackground,
+                        backgroundImage: friend['user_photo'] != null
+                            ? MemoryImage(friend['user_photo'] as Uint8List)
+                            : null,
+                        child: friend['user_photo'] == null
+                            ? Text(
+                                friend['username'][0].toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            : null,
                       ),
               ),
             ),
@@ -473,6 +496,7 @@ class FriendListItem extends StatelessWidget {
                     usersName: friend['username'],
                     isMultiConversation: isMultiConversation,
                     convID: friend['id'],
+                    messageOnVoiceAssistant: null,
                   ),
                 ),
               );

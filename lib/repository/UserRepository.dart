@@ -16,7 +16,6 @@ class UserRepository {
     );
 
     if (response.statusCode == 200) {
-      // Parse the JSON response into a List<User>
       List<dynamic> jsonResponse = jsonDecode(response.body);
       return jsonResponse.map((user) => User.fromJson(user)).toList();
     } else {

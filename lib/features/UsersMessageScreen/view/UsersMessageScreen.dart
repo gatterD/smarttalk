@@ -2,19 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:smarttalk/repository/UsersMessageRepository.dart';
 import 'package:smarttalk/features/UsersMessageScreen/bloc/UsersMessageBloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:provider/provider.dart'; // Import Provider package
-import 'package:smarttalk/provider/ThemeProvider.dart'; // Import ThemeProvider
+import 'package:provider/provider.dart';
+import 'package:smarttalk/provider/ThemeProvider.dart';
 
 class UsersMessageScreen extends StatelessWidget {
   final String usersName;
   final bool isMultiConversation;
   final int convID;
+  final String? messageOnVoiceAssistant;
 
   const UsersMessageScreen({
     super.key,
     required this.usersName,
     required this.isMultiConversation,
     required this.convID,
+    required this.messageOnVoiceAssistant,
   });
 
   @override
@@ -33,6 +35,7 @@ class UsersMessageScreen extends StatelessWidget {
             isMultiConversation: isMultiConversation,
             convID: convID,
             themeProvider: themeProvider,
+            usersVoiceMessage: messageOnVoiceAssistant,
           );
         },
       ),
@@ -47,12 +50,14 @@ class _UsersMessageView extends StatelessWidget {
   final ThemeProvider themeProvider;
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final String? usersVoiceMessage;
 
   _UsersMessageView({
     required this.usersName,
     required this.isMultiConversation,
     required this.convID,
     required this.themeProvider,
+    this.usersVoiceMessage,
   });
 
   void _scrollToBottom() {
@@ -69,6 +74,14 @@ class _UsersMessageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (usersVoiceMessage != null) {
+      context.read<UsersMessageBloc>().add(
+            SendMessage(
+              message: usersVoiceMessage!,
+              isMultiConversation: isMultiConversation,
+            ),
+          );
+    }
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -126,8 +139,8 @@ class _UsersMessageView extends StatelessWidget {
                             ),
                             ConstrainedBox(
                               constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width *
-                                    0.8, // 80% ширины экрана
+                                maxWidth:
+                                    MediaQuery.of(context).size.width * 0.8,
                               ),
                               child: Container(
                                 margin: const EdgeInsets.symmetric(vertical: 4),
@@ -232,7 +245,7 @@ class _UsersMessageView extends StatelessWidget {
               ],
             );
           }
-          return const SizedBox(); // Fallback
+          return const SizedBox();
         },
       ),
     );

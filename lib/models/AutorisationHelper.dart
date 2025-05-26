@@ -4,8 +4,10 @@ import 'package:http/http.dart' as http;
 import 'package:smarttalk/models/User.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smarttalk/services/EncryptionService.dart';
 
 class AuthService {
+  EncryptionService _encryptionService = new EncryptionService();
   final String baseUrl = dotenv.get('BASEURL');
 
   Future<bool> register(User user) async {
@@ -31,7 +33,10 @@ class AuthService {
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username, 'password': password}),
+        body: jsonEncode({
+          'username': username,
+          'password': _encryptionService.encrypt(password)
+        }),
       );
 
       if (response.statusCode == 200) {
