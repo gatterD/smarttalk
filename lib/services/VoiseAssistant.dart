@@ -107,7 +107,10 @@ class VoiceAssistant {
           );
         }
       }
-    } else if (command.contains('чат') || command.contains('открой чат')) {
+    } else if (command.contains('чат') ||
+        command.contains('открой чат') ||
+        command.contains('chat') ||
+        command.contains('open chat')) {
       List<dynamic> user = _extractUserNameFromCommand(command);
       Navigator.push(
         context,
@@ -129,7 +132,11 @@ class VoiceAssistant {
   List<dynamic> _extractUserNameFromCommand(String command) {
     for (var friend in friends) {
       String username = friend['username'].toLowerCase();
+      String commandLower = command.toLowerCase();
       if (command.contains(username)) {
+        return friend;
+      }
+      if (commandLower.contains(username)) {
         return friend;
       }
     }

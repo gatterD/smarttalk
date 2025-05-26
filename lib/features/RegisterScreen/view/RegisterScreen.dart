@@ -23,7 +23,7 @@ class RegisterScreen extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(
             centerTitle: true,
-            title: const Text('Register'),
+            title: const Text('Регистрация'),
             titleTextStyle: themeProvider.currentTheme.textTheme.headlineLarge,
           ),
           body: BlocProvider(
@@ -37,7 +37,7 @@ class RegisterScreen extends StatelessWidget {
                       .add(RegisterFavoriteChatCreation());
 
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Registration successful')),
+                    const SnackBar(content: Text('Регистрация прошла успешно')),
                   );
                 } else if (state is RegisterFailure) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -47,7 +47,7 @@ class RegisterScreen extends StatelessWidget {
                 if (state is RegisterCreatingFavoritesSuccess) {
                   Navigator.pushNamed(context, '/login');
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Registration successful')),
+                    const SnackBar(content: Text('Регистрация прошла успешно')),
                   );
                 }
               },
@@ -88,7 +88,7 @@ class RegisterScreen extends StatelessWidget {
     return TextFormField(
       controller: _usernameController,
       decoration: InputDecoration(
-        hintText: 'Enter username',
+        hintText: 'Введите имя пользователя',
         hintStyle: themeProvider.currentTheme.textTheme.bodyMedium,
       ),
       style: themeProvider.currentTheme.textTheme.bodyMedium,
@@ -100,7 +100,7 @@ class RegisterScreen extends StatelessWidget {
     return TextFormField(
       controller: _passwordController,
       decoration: InputDecoration(
-        hintText: 'Enter password',
+        hintText: 'Введите пароль',
         hintStyle: themeProvider.currentTheme.textTheme.bodyMedium,
       ),
       style: themeProvider.currentTheme.textTheme.bodyMedium,
@@ -113,7 +113,7 @@ class RegisterScreen extends StatelessWidget {
     return TextFormField(
       controller: _passwordSecondController,
       decoration: InputDecoration(
-        hintText: 'Enter password again',
+        hintText: 'Повторите пароль',
         hintStyle: themeProvider.currentTheme.textTheme.bodyMedium,
       ),
       style: themeProvider.currentTheme.textTheme.bodyMedium,
@@ -121,7 +121,7 @@ class RegisterScreen extends StatelessWidget {
         final passwordError = validatePassword(value);
         if (passwordError != null) return passwordError;
         if (value != _passwordController.text) {
-          return 'Passwords must match';
+          return 'Пароли должны совпадать';
         }
         return null;
       },
@@ -151,7 +151,7 @@ class RegisterScreen extends StatelessWidget {
           ),
           child: state is RegisterLoading
               ? const CircularProgressIndicator()
-              : const Text('Register'),
+              : const Text('Зарегистрироваться'),
         );
       },
     );
