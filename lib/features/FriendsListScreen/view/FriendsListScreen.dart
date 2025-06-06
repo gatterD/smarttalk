@@ -283,10 +283,12 @@ class FriendsDrawer extends StatelessWidget {
           builder: (context, state) {
             String username = '';
             String token_ip = '';
+            String AdminIP = '';
             Map<String, dynamic> user = {};
             if (state is FriendsLoadedState) {
               username = state.currentUsername;
               token_ip = state.token_IP;
+              AdminIP = state.Admin_IP;
               for (var friend in state.sortedFriends) {
                 if (friend['username'] == username) {
                   user = friend;
@@ -375,7 +377,7 @@ class FriendsDrawer extends StatelessWidget {
                               Navigator.pushNamed(context, '/black_list'),
                           themeProvider: themeProvider,
                         ),
-                        token_ip == '5.18.96.212'
+                        token_ip == AdminIP
                             ? Column(
                                 children: [
                                   _buildDrawerItem(

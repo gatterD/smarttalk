@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class FriendsRepository {
   final String baseUrl = dotenv.get('BASEURL');
+  final String adminIP = dotenv.get('ADMIN_IP');
 
   Future<String?> getCurrentUserId() async {
     final prefs = await SharedPreferences.getInstance();

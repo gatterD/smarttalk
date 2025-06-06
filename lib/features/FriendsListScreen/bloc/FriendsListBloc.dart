@@ -113,6 +113,7 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         currentUserId: currentUserId!,
         currentUsername: currentUsername ?? '',
         token_IP: token_IP ?? '',
+        Admin_IP: repository.adminIP,
       ));
     } catch (e) {
       emit(FriendsErrorState(e.toString()));

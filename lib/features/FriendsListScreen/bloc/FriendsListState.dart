@@ -12,6 +12,7 @@ class FriendsLoadedState extends FriendsState {
   final String currentUserId;
   final String currentUsername;
   final String token_IP;
+  final String Admin_IP;
 
   FriendsLoadedState({
     required this.sortedFriends,
@@ -21,6 +22,7 @@ class FriendsLoadedState extends FriendsState {
     required this.currentUserId,
     required this.currentUsername,
     required this.token_IP,
+    required this.Admin_IP,
   });
 }
 
