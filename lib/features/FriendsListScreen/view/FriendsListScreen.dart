@@ -1,5 +1,6 @@
+import 'dart:async';
 import 'dart:typed_data';
-
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -20,11 +21,14 @@ class FriendsListScreen extends StatefulWidget {
 
 class _FriendsListScreenState extends State<FriendsListScreen> {
   final VoiceAssistant _voiceAssistant = VoiceAssistant();
+  final FlutterTts _flutterTts = FlutterTts();
   String _recognizedText = '';
+  Timer? _textHideTimer;
 
   @override
   void initState() {
     super.initState();
+    _initTts();
     context.read<FriendsBloc>().stream.listen((state) {
       if (state is FriendsLoadedState) {
         _voiceAssistant.updateFriendsList(state.sortedFriends);
@@ -32,15 +36,70 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     });
   }
 
+  Future<void> _initTts() async {
+    await _flutterTts.setLanguage("ru-RU");
+    await _flutterTts.setSpeechRate(0.5);
+  }
+
+  Future<void> _speak(String text) async {
+    await _flutterTts.speak(text);
+  }
+
   void _handleRecognizedText(String text) {
     setState(() {
       _recognizedText = text;
     });
+
+    // Отменяем предыдущий таймер, если он был
+    _textHideTimer?.cancel();
+
+    // Устанавливаем новый таймер для скрытия текста через 3 секунды
+    _textHideTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _recognizedText = '';
+        });
+      }
+    });
+
+    // Обрабатываем голосовую команду
+    _processVoiceCommand(text);
+  }
+
+  Future<void> _processVoiceCommand(String text) async {
+    final lowerText = text.toLowerCase();
+
+    if (lowerText.contains('открой настройки')) {
+      await _speak('Открываю настройки');
+      Navigator.pushNamed(context, '/settings');
+    } else if (lowerText.contains('создай беседу') ||
+        lowerText.contains('новая беседа')) {
+      await _speak('Открываю создание беседы');
+      Navigator.pushNamed(context, '/chat-creation');
+    } else if (lowerText.contains('чёрный список')) {
+      await _speak('Открываю чёрный список');
+      Navigator.pushNamed(context, '/black_list');
+    } else if (lowerText.contains('поиск') || lowerText.contains('найди')) {
+      await _speak('Открываю поиск');
+      Navigator.pushNamed(context, '/search');
+    } else if (lowerText.contains('выйди') || lowerText.contains('выход')) {
+      await _speak('Выхожу из аккаунта');
+      context.read<FriendsBloc>().add(LogoutEvent());
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => AutorisationScreen()),
+      );
+    } else {
+      // Если команда не распознана, просто озвучиваем что услышали
+      await _speak('Вы сказали: $text');
+    }
   }
 
   @override
   void dispose() {
     _voiceAssistant.stopListening();
+    _textHideTimer?.cancel();
+    _flutterTts.stop();
     super.dispose();
   }
 
@@ -91,6 +150,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                     });
                     context.read<FriendsBloc>().add(LoadFriendsEvent());
                   } else if (state is FriendsLoadedState) {
+                    _voiceAssistant.updateFriendsList(state.sortedFriends);
                     return FriendsListView(
                       state: state,
                       themeProvider: themeProvider,
@@ -141,27 +201,71 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
 
 class RecognizedTextWidget extends StatefulWidget {
   final themeProvider;
-  final recognizedText;
+  final String recognizedText;
 
   const RecognizedTextWidget(
-      {super.key, this.themeProvider, this.recognizedText});
+      {super.key, required this.themeProvider, required this.recognizedText});
+
   @override
   State<RecognizedTextWidget> createState() => _RecognizedTextWidgetState();
 }
 
-class _RecognizedTextWidgetState extends State<RecognizedTextWidget> {
+class _RecognizedTextWidgetState extends State<RecognizedTextWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _opacityAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _opacityAnimation =
+        Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
+    _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(RecognizedTextWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.recognizedText != oldWidget.recognizedText) {
+      if (widget.recognizedText.isNotEmpty) {
+        _controller.reset();
+        _controller.forward();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      decoration: BoxDecoration(
-        color: widget.themeProvider.currentColorTheme.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        'Вы сказали: ${widget.recognizedText}',
-        style: widget.themeProvider.currentTheme.textTheme.labelMedium,
-        textAlign: TextAlign.center,
+    return FadeTransition(
+      opacity: _opacityAnimation,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: widget.themeProvider.currentColorTheme.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Text(
+          'Вы сказали: ${widget.recognizedText}',
+          style: widget.themeProvider.currentTheme.textTheme.labelMedium,
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }

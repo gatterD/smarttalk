@@ -28,7 +28,7 @@ class AppThemes {
           ),
           labelMedium: TextStyle(
             color: colors.lightText,
-            fontSize: 14,
+            fontSize: 12,
           ),
           labelSmall: TextStyle(
             color: colors.lightTextFaded,

@@ -31,7 +31,6 @@ Future<void> main() async {
         RepositoryProvider(
           create: (context) => UserSettingsRepository(),
         ),
-        // Add FriendsRepository if you have one
         RepositoryProvider(
           create: (context) => FriendsRepository(),
         ),
@@ -48,10 +47,9 @@ Future<void> main() async {
               repository: context.read<UserSettingsRepository>(),
             ),
           ),
-          // Add FriendsBloc here
           BlocProvider(
             create: (context) => FriendsBloc(
-              context.read<FriendsRepository>(), // If you have one
+              context.read<FriendsRepository>(),
             ),
           ),
         ],

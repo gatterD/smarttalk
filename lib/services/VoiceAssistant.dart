@@ -13,7 +13,7 @@ class VoiceAssistant {
   final stt.SpeechToText _speech = stt.SpeechToText();
   final baseUrl = dotenv.get('BASEURL');
   bool _isListening = false;
-  List<dynamic> friends = []; // Добавляем список друзей
+  List<dynamic> friends = [];
   bool get isListening => _isListening;
 
   Future<int> getUserIdByUsername(String name) async {
@@ -29,6 +29,10 @@ class VoiceAssistant {
   }
 
   void updateFriendsList(List<dynamic> friendsList) {
+    debugPrint('Updating friends list with ${friendsList.length} friends');
+    if (friendsList.isEmpty) {
+      debugPrint('Warning: Friends list is empty');
+    }
     friends = friendsList;
   }
 
@@ -46,8 +50,8 @@ class VoiceAssistant {
     }
 
     bool available = await _speech.initialize(
-      onStatus: (val) => print('Status: $val'),
-      onError: (val) => print('Error: $val'),
+      onStatus: (val) => debugPrint('Speech Status: $val'),
+      onError: (val) => debugPrint('Speech Error: $val'),
     );
     if (available) {
       _isListening = true;
@@ -69,17 +73,29 @@ class VoiceAssistant {
   }
 
   void _handleCommand(BuildContext context, String command) {
+    debugPrint('Handling command: $command');
+    debugPrint('Current friends list: $friends');
+
+    if (command.isEmpty) {
+      debugPrint('Error: Empty command received');
+      return;
+    }
+
     if (command.contains('поиск') || command.contains('найти')) {
+      debugPrint('Navigating to search screen');
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => SearchScreen()),
       );
     } else if (command.contains('создать чат') ||
         command.contains('новый чат')) {
+      debugPrint('Navigating to chat creation');
       Navigator.pushNamed(context, '/chat-creation');
     } else if (command.contains('настройки')) {
+      debugPrint('Navigating to settings');
       Navigator.pushNamed(context, '/settings');
     } else if (command.contains('напиши') || command.contains('отправь')) {
+      debugPrint('Processing message command');
       final originalCommand = command;
       final lowerCommand = command.toLowerCase();
 
@@ -87,12 +103,14 @@ class VoiceAssistant {
 
       if (user.isNotEmpty && user[0] != null) {
         String username = user[0]['username'].toLowerCase();
+        debugPrint('Found user for message: $username');
 
         int usernameIndex = lowerCommand.indexOf(username);
 
         if (usernameIndex != -1) {
           String message =
               originalCommand.substring(usernameIndex + username.length).trim();
+          debugPrint('Extracted message: $message');
 
           Navigator.push(
             context,
@@ -106,40 +124,63 @@ class VoiceAssistant {
             ),
           );
         }
+      } else {
+        debugPrint('No valid user found for message command');
       }
     } else if (command.contains('чат') ||
         command.contains('открой чат') ||
         command.contains('chat') ||
-        command.contains('open chat')) {
+        command.contains('open chat') ||
+        command.contains('openchat')) {
       List<dynamic> user = _extractUserNameFromCommand(command);
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) => UsersMessageScreen(
-                  usersName: user[0]['username'],
-                  isMultiConversation: user[0]['id'] >= 5000 ? true : false,
-                  convID: user[0]['id'],
-                  messageOnVoiceAssistant: null,
-                )),
-      );
+      if (user.isNotEmpty && user[0] != null) {
+        debugPrint('Opening chat with user: ${user[0]['username']}');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) => UsersMessageScreen(
+                    usersName: user[0]['username'],
+                    isMultiConversation: user[0]['id'] >= 5000 ? true : false,
+                    convID: user[0]['id'],
+                    messageOnVoiceAssistant: null,
+                  )),
+        );
+      } else {
+        debugPrint('No valid user found for chat command');
+      }
     } else if (command.contains('черный список') ||
-        command.contains('блокировки')) {
+        command.contains('блокировки') ||
+        command.contains('blacklist') ||
+        command.contains('black list')) {
       Navigator.pushNamed(context, '/black_list');
+    } else {
+      debugPrint('No matching command found: $command');
     }
     stopListening();
   }
 
   List<dynamic> _extractUserNameFromCommand(String command) {
+    debugPrint('Extracting username from command: $command');
+    if (friends.isEmpty) {
+      debugPrint(
+          'Error: Friends list is empty when trying to extract username');
+      return [];
+    }
+
     for (var friend in friends) {
       String username = friend['username'].toLowerCase();
       String commandLower = command.toLowerCase();
       if (command.contains(username)) {
-        return friend;
+        debugPrint('Found matching friend: ${friend['username']}');
+        return [friend];
       }
       if (commandLower.contains(username)) {
-        return friend;
+        debugPrint(
+            'Found matching friend (case insensitive): ${friend['username']}');
+        return [friend];
       }
     }
-    return friends[0];
+    debugPrint('No matching friend found, returning first friend');
+    return [];
   }
 }
