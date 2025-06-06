@@ -12,9 +12,52 @@ class FriendsRepository {
     return prefs.getString('id');
   }
 
+  Future<String?> getCurrentUserToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token');
+  }
+
   Future<String?> getCurrentUsername() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('username');
+  }
+
+  Future<List<dynamic>> getBlacklist(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/black_list/$userId'),
+        headers: {'Accept': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data;
+      } else if (response.statusCode == 404) {
+        throw Exception('Пользователь не найден');
+      } else {
+        throw Exception('Ошибка сервера: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Ошибка при получении черного списка: $e');
+    }
+  }
+
+  Future<List<dynamic>> deleteBLUsers(
+      List<dynamic> ConvList, List<dynamic> BlackList) async {
+    try {
+      final blackListIds =
+          BlackList.map((user) => user['id'].toString()).toSet();
+
+      final filteredList = ConvList.where((user) {
+        final userId = user['id'].toString();
+        return !blackListIds.contains(userId);
+      }).toList();
+
+      return filteredList;
+    } catch (e) {
+      print('Error filtering users: $e');
+      return ConvList;
+    }
   }
 
   Future<List<dynamic>> fetchFriends(String userId) async {

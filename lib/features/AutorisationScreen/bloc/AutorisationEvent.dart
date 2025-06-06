@@ -8,3 +8,7 @@ class LoginEvent extends AutorisationEvent {
 
   LoginEvent(this.username, this.password);
 }
+
+class AutoLoginRequested extends AutorisationEvent {}
+
+class AutoLoginByIpEvent extends AutorisationEvent {}

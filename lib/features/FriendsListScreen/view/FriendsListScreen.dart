@@ -282,9 +282,11 @@ class FriendsDrawer extends StatelessWidget {
           buildWhen: (previous, current) => current != previous,
           builder: (context, state) {
             String username = '';
+            String token_ip = '';
             Map<String, dynamic> user = {};
             if (state is FriendsLoadedState) {
               username = state.currentUsername;
+              token_ip = state.token_IP;
               for (var friend in state.sortedFriends) {
                 if (friend['username'] == username) {
                   user = friend;
@@ -373,11 +375,30 @@ class FriendsDrawer extends StatelessWidget {
                               Navigator.pushNamed(context, '/black_list'),
                           themeProvider: themeProvider,
                         ),
-                        Divider(
-                          color: themeProvider.currentColorTheme.drawerDivider,
-                          indent: 16,
-                          endIndent: 16,
-                        ),
+                        token_ip == '5.18.96.212'
+                            ? Column(
+                                children: [
+                                  _buildDrawerItem(
+                                    icon: Icons.person_add,
+                                    text: 'Регистрация',
+                                    onTap: () => Navigator.pushNamed(
+                                        context, '/register'),
+                                    themeProvider: themeProvider,
+                                  ),
+                                  Divider(
+                                    color: themeProvider
+                                        .currentColorTheme.drawerDivider,
+                                    indent: 16,
+                                    endIndent: 16,
+                                  ),
+                                ],
+                              )
+                            : Divider(
+                                color: themeProvider
+                                    .currentColorTheme.drawerDivider,
+                                indent: 16,
+                                endIndent: 16,
+                              ),
                         _buildDrawerItem(
                           icon: Icons.exit_to_app,
                           text: 'Выйти',

@@ -89,24 +89,11 @@ class AutorisationScreen extends StatelessWidget {
                         );
                       },
                     ),
+                    const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          'Нет аккаунта?',
-                          style:
-                              themeProvider.currentTheme.textTheme.labelMedium,
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/register');
-                          },
-                          child: Text(
-                            'Зарегистрироваться',
-                            style: themeProvider
-                                .currentTheme.textTheme.labelMedium,
-                          ),
-                        ),
+                        const IpAuthButton(),
                       ],
                     ),
                   ],
@@ -115,6 +102,45 @@ class AutorisationScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class IpAuthButton extends StatelessWidget {
+  const IpAuthButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      right: 0,
+      bottom: 0,
+      child: GestureDetector(
+        onTap: () {
+          context.read<AutorisationBloc>().add(AutoLoginRequested());
+        },
+        child: Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            color: Theme.of(context).primaryColor,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 8,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: const Center(
+            child: Icon(
+              Icons.network_wifi,
+              size: 36,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
     );
   }

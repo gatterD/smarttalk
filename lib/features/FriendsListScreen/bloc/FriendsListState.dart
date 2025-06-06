@@ -11,6 +11,7 @@ class FriendsLoadedState extends FriendsState {
   final List<dynamic> multiConversations;
   final String currentUserId;
   final String currentUsername;
+  final String token_IP;
 
   FriendsLoadedState({
     required this.sortedFriends,
@@ -19,6 +20,7 @@ class FriendsLoadedState extends FriendsState {
     required this.multiConversations,
     required this.currentUserId,
     required this.currentUsername,
+    required this.token_IP,
   });
 }
 

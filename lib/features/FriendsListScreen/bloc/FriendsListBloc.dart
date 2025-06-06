@@ -70,7 +70,6 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         };
       }).toList();
 
-      // Process pinned users
       final pinnedConversationsList = pinnedFriends
           .map((id) {
             final friend = friends.firstWhere((friend) => friend["id"] == id,
@@ -91,7 +90,6 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
           })
           .where((conversation) => conversation != null)
           .toList();
-
       sortedFriends = [
         ...pinnedConversationsList,
         ...friends.where((friend) => !pinnedFriends.contains(friend["id"])),
@@ -101,6 +99,11 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
             .where((conv) => !pinnedFriends.contains(conv["id"])),
       ];
 
+      final BlacListUsers = await repository.getBlacklist(currentUserId!);
+      sortedFriends =
+          await repository.deleteBLUsers(sortedFriends, BlacListUsers);
+
+      String? token_IP = await repository.getCurrentUserToken();
       sortedFriends = await _photoModel.enrichUsersWithPhotos(sortedFriends);
       emit(FriendsLoadedState(
         sortedFriends: sortedFriends,
@@ -109,6 +112,7 @@ class FriendsBloc extends Bloc<FriendsEvent, FriendsState> {
         multiConversations: multiConversations,
         currentUserId: currentUserId!,
         currentUsername: currentUsername ?? '',
+        token_IP: token_IP ?? '',
       ));
     } catch (e) {
       emit(FriendsErrorState(e.toString()));
